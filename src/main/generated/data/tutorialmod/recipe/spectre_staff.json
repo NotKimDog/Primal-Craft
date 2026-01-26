@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "equipment",
+  "ingredients": [
+    "tutorialmod:pink_garnet",
+    "minecraft:blaze_rod"
+  ],
+  "result": {
+    "count": 1,
+    "id": "tutorialmod:spectre_staff"
+  }
+}

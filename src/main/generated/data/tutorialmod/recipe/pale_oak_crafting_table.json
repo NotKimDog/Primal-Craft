@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "P": "minecraft:pale_oak_planks"
+  },
+  "pattern": [
+    "PP ",
+    "PP ",
+    "   "
+  ],
+  "result": {
+    "count": 1,
+    "id": "tutorialmod:pale_oak_crafting_table"
+  }
+}

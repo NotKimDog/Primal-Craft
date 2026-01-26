@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "P": "minecraft:crimson_planks"
+  },
+  "pattern": [
+    "PP ",
+    "PP ",
+    "   "
+  ],
+  "result": {
+    "count": 1,
+    "id": "tutorialmod:crimson_crafting_table"
+  }
+}

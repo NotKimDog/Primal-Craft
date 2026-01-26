@@ -1,0 +1,37 @@
+{
+	"schemaVersion": 1,
+	"id": "tutorialmod",
+	"version": "${version}",
+	"name": "KimDog's SMP 1.21.X",
+	"description": "A Fabric-only sound physics mod inspired by Sound Physics Remastered.",
+	"authors": [
+		"KimDog Studios"
+	],
+	"contact": {
+		"homepage": "",
+		"sources": "https://github.com/NotKimDog/KimDog-SMP-1.21.X"
+	},
+	"license": "MIT",
+	"icon": "assets/tutorialmod/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"net.kaupenjoe.tutorialmod.TutorialMod"
+		],
+		"client": [
+			"net.kaupenjoe.tutorialmod.TutorialModClient"
+		],
+		"fabric-datagen": [
+			"net.kaupenjoe.tutorialmod.TutorialModDataGenerator"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=${loader_version}",
+		"minecraft": "${minecraft_version}",
+		"java": ">=21",
+		"fabric-api": ">=${fabric_api_version}"
+	},
+	"mixins": [
+		"tutorialmod.mixins.json"
+	]
+}

@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "P": "tutorialmod:pink_garnet",
+    "R": "minecraft:redstone"
+  },
+  "pattern": [
+    "PPP",
+    "PRP",
+    "PPP"
+  ],
+  "result": {
+    "count": 1,
+    "id": "tutorialmod:pink_garnet_lamp"
+  }
+}

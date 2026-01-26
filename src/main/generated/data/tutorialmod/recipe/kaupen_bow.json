@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "equipment",
+  "ingredients": [
+    "minecraft:string",
+    "minecraft:string",
+    "minecraft:string",
+    "tutorialmod:pink_garnet"
+  ],
+  "result": {
+    "count": 1,
+    "id": "tutorialmod:kaupen_bow"
+  }
+}

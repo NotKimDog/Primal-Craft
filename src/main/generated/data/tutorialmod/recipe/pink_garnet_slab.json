@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "P": "tutorialmod:pink_garnet"
+  },
+  "pattern": [
+    "PPP"
+  ],
+  "result": {
+    "count": 1,
+    "id": "tutorialmod:pink_garnet_slab"
+  }
+}

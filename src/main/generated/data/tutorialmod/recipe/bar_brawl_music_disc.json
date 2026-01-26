@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:music_disc_13",
+    "tutorialmod:pink_garnet"
+  ],
+  "result": {
+    "count": 1,
+    "id": "tutorialmod:bar_brawl_music_disc"
+  }
+}

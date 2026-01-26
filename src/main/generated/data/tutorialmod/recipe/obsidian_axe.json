@@ -1,0 +1,28 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "O": "minecraft:obsidian",
+    "S": [
+      "tutorialmod:acacia_stick",
+      "tutorialmod:birch_stick",
+      "tutorialmod:cherry_stick",
+      "tutorialmod:crimson_stick",
+      "tutorialmod:dark_oak_stick",
+      "tutorialmod:jungle_stick",
+      "tutorialmod:mangrove_stick",
+      "tutorialmod:pale_oak_stick",
+      "tutorialmod:spruce_stick",
+      "tutorialmod:warped_stick"
+    ]
+  },
+  "pattern": [
+    "OO ",
+    "OS ",
+    " S "
+  ],
+  "result": {
+    "count": 1,
+    "id": "tutorialmod:obsidian_axe"
+  }
+}

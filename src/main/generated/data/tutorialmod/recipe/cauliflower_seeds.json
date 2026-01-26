@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "tutorialmod:cauliflower"
+  ],
+  "result": {
+    "count": 1,
+    "id": "tutorialmod:cauliflower_seeds"
+  }
+}

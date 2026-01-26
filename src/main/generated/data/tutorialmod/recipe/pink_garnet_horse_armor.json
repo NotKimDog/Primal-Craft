@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "P": "tutorialmod:pink_garnet"
+  },
+  "pattern": [
+    "PPP",
+    "PPP",
+    "P P"
+  ],
+  "result": {
+    "count": 1,
+    "id": "tutorialmod:pink_garnet_horse_armor"
+  }
+}
