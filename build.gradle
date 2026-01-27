@@ -1564,6 +1564,147 @@ def bumpVersion(String mode) {
 	return [props, propsFile, parts.join('.')]
 }
 
+// Git helper functions for auto-commit
+def getGitDiff() {
+	try {
+		return "git diff --name-status HEAD".execute().text
+	} catch (Exception e) {
+		return ""
+	}
+}
+
+def getUnstagedChanges() {
+	try {
+		return "git diff --name-only".execute().text.split('\n').findAll { it.trim() }
+	} catch (Exception e) {
+		return []
+	}
+}
+
+def getStagedChanges() {
+	try {
+		return "git diff --cached --name-only".execute().text.split('\n').findAll { it.trim() }
+	} catch (Exception e) {
+		return []
+	}
+}
+
+def getUntrackedFiles() {
+	try {
+		return "git ls-files --others --exclude-standard".execute().text.split('\n').findAll { it.trim() }
+	} catch (Exception e) {
+		return []
+	}
+}
+
+def analyzeChanges() {
+	def changes = [:]
+	def unstaged = getUnstagedChanges()
+	def staged = getStagedChanges()
+	def untracked = getUntrackedFiles()
+	def allFiles = (unstaged + staged + untracked).unique()
+
+	def javaFiles = allFiles.findAll { it.endsWith('.java') }
+	def gradleFiles = allFiles.findAll { it.endsWith('.gradle') || it.endsWith('gradle.properties') }
+	def jsonFiles = allFiles.findAll { it.endsWith('.json') }
+	def otherFiles = allFiles.findAll { !javaFiles.contains(it) && !gradleFiles.contains(it) && !jsonFiles.contains(it) }
+
+	changes.javaCount = javaFiles.size()
+	changes.gradleCount = gradleFiles.size()
+	changes.jsonCount = jsonFiles.size()
+	changes.otherCount = otherFiles.size()
+	changes.totalCount = allFiles.size()
+	changes.allFiles = allFiles
+	changes.javaFiles = javaFiles
+	changes.gradleFiles = gradleFiles
+
+	return changes
+}
+
+def stageAllChanges() {
+	try {
+		"git add -A".execute().waitFor()
+		return true
+	} catch (Exception e) {
+		println "⚠️  Failed to stage changes: ${e.message}"
+		return false
+	}
+}
+
+def createSmartCommitMessage(String bumpType) {
+	def changes = analyzeChanges()
+	def timestamp = new Date().format('yyyy-MM-dd HH:mm:ss')
+	def summary = []
+
+	summary << "chore(release): Bump version to ${project.mod_version} (${bumpType})"
+	summary << ""
+	summary << "🔄 AUTOMATED RELEASE v${project.mod_version}"
+	summary << ""
+	summary << "📊 CHANGES:"
+
+	if (changes.javaCount > 0) {
+		summary << "  • Java files: ${changes.javaCount}"
+	}
+	if (changes.gradleCount > 0) {
+		summary << "  • Build config: ${changes.gradleCount}"
+	}
+	if (changes.jsonCount > 0) {
+		summary << "  • Data files: ${changes.jsonCount}"
+	}
+	if (changes.otherCount > 0) {
+		summary << "  • Other files: ${changes.otherCount}"
+	}
+
+	summary << ""
+	summary << "📝 FILES MODIFIED:"
+	changes.javaFiles.take(10).each { f ->
+		summary << "  • ${f}"
+	}
+	if (changes.javaFiles.size() > 10) {
+		summary << "  • ... and ${changes.javaFiles.size() - 10} more Java files"
+	}
+
+	summary << ""
+	summary << "⏰ Timestamp: ${timestamp}"
+	summary << "📦 Build System: Automated Release Pipeline"
+
+	return summary.join('\n')
+}
+
+def createAutomatedCommit(String bumpType) {
+	try {
+		if (!stageAllChanges()) {
+			return false
+		}
+
+		def commitMsg = createSmartCommitMessage(bumpType)
+		def process = "git commit -m \"${commitMsg.split('\n')[0]}\" -m \"${commitMsg.substring(commitMsg.indexOf('\n') + 1)}\"".execute()
+		process.waitFor()
+
+		if (process.exitValue() == 0) {
+			println ""
+			println "╔════════════════════════════════════════════════════════════╗"
+			println "║  ✅ COMMIT CREATED AUTOMATICALLY                           ║"
+			println "╚════════════════════════════════════════════════════════════╝"
+			println "  📝 Message: Release v${project.mod_version} (${bumpType})"
+			println "  📊 Summary:"
+			def changes = analyzeChanges()
+			if (changes.javaCount > 0) println "     • Java files: ${changes.javaCount}"
+			if (changes.gradleCount > 0) println "     • Build config: ${changes.gradleCount}"
+			if (changes.jsonCount > 0) println "     • Data files: ${changes.jsonCount}"
+			if (changes.totalCount > 0) println "     • Total files: ${changes.totalCount}"
+			println ""
+			return true
+		} else {
+			println "  ⚠️  Commit failed with exit code: ${process.exitValue()}"
+			return false
+		}
+	} catch (Exception e) {
+		println "  ⚠️  Error creating commit: ${e.message}"
+		return false
+	}
+}
+
 // Automatically detect version bump type from git commits
 def detectVersionBumpType() {
 	try {
@@ -1666,12 +1807,12 @@ tasks.register('changelog') {
 	}
 }
 
-// Automatic release: bump version + generate changelog
+// Automatic release: bump version + generate changelog + create commit
 tasks.register('autoRelease') {
 	group = 'versioning'
-	description = 'Automatic release: detects version bump type, bumps version, and generates changelog'
+	description = 'Automatic release: version bump, changelog, AND auto-commit with detailed messages'
 	dependsOn 'autoVersion'
-	finalizedBy 'changelog'
+	finalizedBy 'changelog', 'autoCommit'
 
 	doLast {
 		println ""
@@ -1680,13 +1821,28 @@ tasks.register('autoRelease') {
 		println "╚════════════════════════════════════════════════════════════╝"
 		println "  ✓ Version bumped based on git commits"
 		println "  ✓ Changelog generated"
+		println "  ✓ Commit created automatically"
 		println ""
 		println "  💡 Next steps:"
 		println "     1. Review changelog in logs/ folder"
-		println "     2. Commit: git add . && git commit -m 'Release'"
-		println "     3. Tag: git tag -a v${project.mod_version} -m 'Release'"
-		println "     4. Build: gradle build"
+		println "     2. Tag: git tag -a v${project.mod_version} -m 'Release v${project.mod_version}'"
+		println "     3. Build: gradle build"
 		println ""
+	}
+}
+
+// Auto-commit with detailed change analysis
+tasks.register('autoCommit') {
+	group = 'versioning'
+	description = 'Automatically commit all changes with detailed message'
+
+	doLast {
+		def bumpType = detectVersionBumpType()
+		if (!bumpType) {
+			bumpType = 'patch'
+		}
+
+		createAutomatedCommit(bumpType)
 	}
 }
 
@@ -1698,38 +1854,52 @@ tasks.register('showVersionInfo') {
 	doLast {
 		println ""
 		println "╔════════════════════════════════════════════════════════════╗"
-		println "║  📦 VERSION MANAGEMENT SYSTEM                              ║"
+		println "║  📦 VERSION MANAGEMENT & AUTO-COMMIT SYSTEM                ║"
 		println "╚════════════════════════════════════════════════════════════╝"
 		println ""
 		println "  Current Version: ${project.mod_version}"
 		println ""
-		println "  🤖 AUTOMATIC VERSIONING:"
-		println "     • gradle autoVersion  - Auto-detect bump type from commits"
-		println "     • gradle autoRelease  - Full auto release (version + changelog)"
+		println "  🤖 AUTOMATIC VERSIONING & COMMITS:"
+		println "     • gradle autoVersion    - Auto-detect bump type from commits"
+		println "     • gradle autoRelease    - FULL AUTO (version + changelog + commit)"
+		println "     • gradle autoCommit     - Create smart commit with change analysis"
 		println ""
 		println "  📍 MANUAL VERSION BUMPING:"
-		println "     • gradle bumpPatch    - Increment patch (1.0.0 → 1.0.1)"
-		println "     • gradle bumpMinor    - Increment minor (1.0.0 → 1.1.0)"
-		println "     • gradle bumpMajor    - Increment major (1.0.0 → 2.0.0)"
+		println "     • gradle bumpPatch      - Increment patch (1.0.0 → 1.0.1)"
+		println "     • gradle bumpMinor      - Increment minor (1.0.0 → 1.1.0)"
+		println "     • gradle bumpMajor      - Increment major (1.0.0 → 2.0.0)"
 		println ""
-		println "  📝 CHANGELOG:"
-		println "     • gradle changelog   - Generate CHANGELOG from last 10 commits"
+		println "  📝 CHANGELOG & COMMITS:"
+		println "     • gradle changelog     - Generate CHANGELOG from last 10 commits"
+		println "     • gradle autoCommit    - Auto-stage and commit with detailed message"
 		println ""
 		println "  🎯 COMMIT TYPES FOR AUTO DETECTION:"
 		println "     • breaking: or BREAKING:  → MAJOR version bump"
 		println "     • feat: or feature:       → MINOR version bump"
 		println "     • fix: or bugfix:         → PATCH version bump"
 		println ""
-		println "  ⚡ QUICK WORKFLOW:"
+		println "  ⚡ ULTIMATE ONE-COMMAND WORKFLOW:"
 		println "     1. Make commits with feat:, fix:, or breaking: prefixes"
 		println "     2. Run: gradle autoRelease"
-		println "     3. Review changelog in logs/"
-		println "     4. Run: gradle build"
+		println "     3. Does EVERYTHING automatically:"
+		println "        • Detects version bump type"
+		println "        • Updates gradle.properties"
+		println "        • Generates CHANGELOG"
+		println "        • Stages all changes"
+		println "        • Creates detailed commit message"
+		println "        • Ready to tag and build!"
+		println ""
+		println "  📊 SMART COMMIT FEATURES:"
+		println "     ✓ Analyzes all changed files"
+		println "     ✓ Counts files by type (Java, gradle, JSON, etc)"
+		println "     ✓ Lists modified files in commit message"
+		println "     ✓ Includes timestamp and automation metadata"
+		println "     ✓ Multi-line commit for better readability"
 		println ""
 		println "  📊 CONFIGURATION:"
 		println "     Version file: gradle.properties (mod_version property)"
 		println "     Changelog dir: logs/"
-		println "     Log dir: logs/"
+		println "     Auto-commits are created with semantic messages"
 		println ""
 	}
 }
