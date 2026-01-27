@@ -1676,11 +1676,11 @@ def createAutomatedCommit(String bumpType) {
 		if (!stageAllChanges()) {
 			return false
 		}
-
 		def commitMsg = createSmartCommitMessage(bumpType)
-		def process = "git commit -m \"${commitMsg.split('\n')[0]}\" -m \"${commitMsg.substring(commitMsg.indexOf('\n') + 1)}\"".execute()
+		def firstLine = commitMsg.split('\n')[0]
+		def body = commitMsg.substring(commitMsg.indexOf('\n') + 1)
+		def process = "git commit -m \"${firstLine}\" -m \"${body}\"".execute()
 		process.waitFor()
-
 		if (process.exitValue() == 0) {
 			println ""
 			println "╔════════════════════════════════════════════════════════════╗"
@@ -1701,6 +1701,93 @@ def createAutomatedCommit(String bumpType) {
 		}
 	} catch (Exception e) {
 		println "  ⚠️  Error creating commit: ${e.message}"
+		return false
+	}
+}
+
+// Auto-create git tag
+def createGitTag() {
+	try {
+		def tagName = "v${project.mod_version}"
+		def tagMsg = "Release ${tagName} - Automated Release"
+
+		// Create annotated tag
+		def createProcess = "git tag -a ${tagName} -m \"${tagMsg}\"".execute()
+		createProcess.waitFor()
+
+		if (createProcess.exitValue() == 0) {
+			println ""
+			println "╔════════════════════════════════════════════════════════════╗"
+			println "║  ✅ GIT TAG CREATED                                        ║"
+			println "╚════════════════════════════════════════════════════════════╝"
+			println "  🏷️  Tag: ${tagName}"
+			println "  📝 Message: ${tagMsg}"
+			println ""
+			return true
+		} else {
+			def errorOutput = createProcess.errorStream?.text ?: ""
+			// Check if tag already exists
+			if (errorOutput.contains("already exists")) {
+				println "  ℹ️  Tag ${tagName} already exists (skipping)"
+				return true
+			}
+			println "  ⚠️  Failed to create tag: ${errorOutput}"
+			return false
+		}
+	} catch (Exception e) {
+		println "  ⚠️  Error creating tag: ${e.message}"
+		return false
+	}
+}
+
+def pushToRemote() {
+	try {
+		// Get current branch
+		def branchProcess = "git rev-parse --abbrev-ref HEAD".execute()
+		branchProcess.waitFor()
+		def branch = branchProcess.text.trim()
+
+		if (!branch) {
+			println "  ⚠️  Could not determine current branch"
+			return false
+		}
+
+		println ""
+		println "╔════════════════════════════════════════════════════════════╗"
+		println "║  📤 PUSHING TO REMOTE                                      ║"
+		println "╚════════════════════════════════════════════════════════════╝"
+		println "  🌐 Branch: ${branch}"
+		println "  ⏳ Pushing commits..."
+
+		// Push commits
+		def pushProcess = "git push origin ${branch}".execute()
+		pushProcess.waitFor()
+
+		if (pushProcess.exitValue() != 0) {
+			def errorMsg = pushProcess.errorStream?.text ?: "Unknown error"
+			println "  ⚠️  Failed to push commits: ${errorMsg}"
+			return false
+		}
+
+		println "  ✅ Commits pushed successfully"
+		println "  ⏳ Pushing tags..."
+
+		// Push tags
+		def tagPushProcess = "git push origin --tags".execute()
+		tagPushProcess.waitFor()
+
+		if (tagPushProcess.exitValue() != 0) {
+			def errorMsg = tagPushProcess.errorStream?.text ?: "Unknown error"
+			println "  ⚠️  Failed to push tags: ${errorMsg}"
+			return false
+		}
+
+		println "  ✅ Tags pushed successfully"
+		println ""
+		return true
+
+	} catch (Exception e) {
+		println "  ⚠️  Error pushing to remote: ${e.message}"
 		return false
 	}
 }
@@ -1807,12 +1894,12 @@ tasks.register('changelog') {
 	}
 }
 
-// Automatic release: bump version + generate changelog + create commit
+// Automatic release: bump version + generate changelog + create commit + tag + push
 tasks.register('autoRelease') {
 	group = 'versioning'
-	description = 'Automatic release: version bump, changelog, AND auto-commit with detailed messages'
+	description = 'COMPLETE AUTO RELEASE: version bump, changelog, commit, tag, AND push to remote'
 	dependsOn 'autoVersion'
-	finalizedBy 'changelog', 'autoCommit'
+	finalizedBy 'changelog', 'autoCommit', 'autoTag', 'autoPush'
 
 	doLast {
 		println ""
@@ -1822,11 +1909,11 @@ tasks.register('autoRelease') {
 		println "  ✓ Version bumped based on git commits"
 		println "  ✓ Changelog generated"
 		println "  ✓ Commit created automatically"
+		println "  ✓ Git tag created (v${project.mod_version})"
+		println "  ✓ Pushed to remote (commits + tags)"
 		println ""
-		println "  💡 Next steps:"
-		println "     1. Review changelog in logs/ folder"
-		println "     2. Tag: git tag -a v${project.mod_version} -m 'Release v${project.mod_version}'"
-		println "     3. Build: gradle build"
+		println "  🎉 Everything is done! Ready to build:"
+		println "     gradle build"
 		println ""
 	}
 }
@@ -1846,6 +1933,26 @@ tasks.register('autoCommit') {
 	}
 }
 
+// Auto-tag the release
+tasks.register('autoTag') {
+	group = 'versioning'
+	description = 'Automatically create git tag for current version'
+
+	doLast {
+		createGitTag()
+	}
+}
+
+// Auto-push to remote
+tasks.register('autoPush') {
+	group = 'versioning'
+	description = 'Automatically push commits and tags to remote repository'
+
+	doLast {
+		pushToRemote()
+	}
+}
+
 // Show versioning info and available commands
 tasks.register('showVersionInfo') {
 	group = 'help'
@@ -1854,24 +1961,25 @@ tasks.register('showVersionInfo') {
 	doLast {
 		println ""
 		println "╔════════════════════════════════════════════════════════════╗"
-		println "║  📦 VERSION MANAGEMENT & AUTO-COMMIT SYSTEM                ║"
+		println "║  🚀 COMPLETE AUTOMATED RELEASE SYSTEM                      ║"
 		println "╚════════════════════════════════════════════════════════════╝"
 		println ""
 		println "  Current Version: ${project.mod_version}"
 		println ""
-		println "  🤖 AUTOMATIC VERSIONING & COMMITS:"
-		println "     • gradle autoVersion    - Auto-detect bump type from commits"
-		println "     • gradle autoRelease    - FULL AUTO (version + changelog + commit)"
+		println "  🤖 COMPLETE AUTO PIPELINE (ONE COMMAND):"
+		println "     • gradle autoRelease - EVERYTHING (version, changelog, commit, tag, push)"
+		println ""
+		println "  🎯 INDIVIDUAL AUTO COMMANDS:"
+		println "     • gradle autoVersion    - Auto-detect & bump version from commits"
 		println "     • gradle autoCommit     - Create smart commit with change analysis"
+		println "     • gradle autoTag        - Create git tag (v${project.mod_version})"
+		println "     • gradle autoPush       - Push commits & tags to remote"
+		println "     • gradle changelog      - Generate CHANGELOG from commits"
 		println ""
 		println "  📍 MANUAL VERSION BUMPING:"
 		println "     • gradle bumpPatch      - Increment patch (1.0.0 → 1.0.1)"
 		println "     • gradle bumpMinor      - Increment minor (1.0.0 → 1.1.0)"
 		println "     • gradle bumpMajor      - Increment major (1.0.0 → 2.0.0)"
-		println ""
-		println "  📝 CHANGELOG & COMMITS:"
-		println "     • gradle changelog     - Generate CHANGELOG from last 10 commits"
-		println "     • gradle autoCommit    - Auto-stage and commit with detailed message"
 		println ""
 		println "  🎯 COMMIT TYPES FOR AUTO DETECTION:"
 		println "     • breaking: or BREAKING:  → MAJOR version bump"
@@ -1881,25 +1989,38 @@ tasks.register('showVersionInfo') {
 		println "  ⚡ ULTIMATE ONE-COMMAND WORKFLOW:"
 		println "     1. Make commits with feat:, fix:, or breaking: prefixes"
 		println "     2. Run: gradle autoRelease"
-		println "     3. Does EVERYTHING automatically:"
-		println "        • Detects version bump type"
+		println "     3. That's it! Everything happens automatically:"
+		println "        • Detects version bump type from git"
 		println "        • Updates gradle.properties"
-		println "        • Generates CHANGELOG"
+		println "        • Generates CHANGELOG in logs/"
 		println "        • Stages all changes"
-		println "        • Creates detailed commit message"
-		println "        • Ready to tag and build!"
+		println "        • Creates detailed commit with file analysis"
+		println "        • Creates git tag (v${project.mod_version})"
+		println "        • Pushes to remote (commits & tags)"
+		println "        • Ready to: gradle build"
 		println ""
 		println "  📊 SMART COMMIT FEATURES:"
 		println "     ✓ Analyzes all changed files"
 		println "     ✓ Counts files by type (Java, gradle, JSON, etc)"
 		println "     ✓ Lists modified files in commit message"
 		println "     ✓ Includes timestamp and automation metadata"
-		println "     ✓ Multi-line commit for better readability"
+		println "     ✓ Multi-line commits for readability"
 		println ""
-		println "  📊 CONFIGURATION:"
-		println "     Version file: gradle.properties (mod_version property)"
-		println "     Changelog dir: logs/"
-		println "     Auto-commits are created with semantic messages"
+		println "  📤 PUSH & TAG FEATURES:"
+		println "     ✓ Auto-creates annotated git tag"
+		println "     ✓ Pushes commits to origin branch"
+		println "     ✓ Pushes tags to origin"
+		println "     ✓ Handles network errors gracefully"
+		println ""
+		println "  ⚙️  CONFIGURATION:"
+		println "     Version file: gradle.properties (mod_version)"
+		println "     Logs dir: logs/"
+		println "     Remote: origin (default git remote)"
+		println "     Branch: auto-detected from git"
+		println ""
+		println "  🔥 ZERO-TOUCH RELEASE:"
+		println "     One command does everything your team needs!"
+		println "     No manual commits, tags, or pushes required."
 		println ""
 	}
 }
@@ -1997,5 +2118,3 @@ tasks.named('fullHelp') {
 		println ""
 	}
 }
-
-
