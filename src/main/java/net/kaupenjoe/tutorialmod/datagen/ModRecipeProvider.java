@@ -187,37 +187,10 @@ public class ModRecipeProvider extends FabricRecipeProvider {
             RecipeCategory category = toolType.equals("sword") ? RecipeCategory.COMBAT : RecipeCategory.TOOLS;
             ShapedRecipeJsonBuilder builder = ctx.createShaped(category, output);
 
-            switch (toolType.toLowerCase()) {
-                case "sword" -> {
-                    builder.pattern("M");
-                    builder.pattern("M");
-                    builder.pattern("S");
-                }
-                case "pickaxe" -> {
-                    builder.pattern("MMM");
-                    builder.pattern("MS ");
-                    builder.pattern("MS ");
-                }
-                case "hammer" -> {
-                    builder.pattern("MM ");
-                    builder.pattern("MS ");
-                    builder.pattern("MS ");
-                }
-                case "shovel" -> {
-                    builder.pattern("M");
-                    builder.pattern("S");
-                    builder.pattern("S");
-                }
-                case "axe" -> {
-                    builder.pattern("MM ");
-                    builder.pattern("MS ");
-                    builder.pattern(" S ");
-                }
-                case "hoe" -> {
-                    builder.pattern("MM ");
-                    builder.pattern(" S ");
-                    builder.pattern(" S ");
-                }
+            // Use patterns from DatagenHelper configuration - eliminates duplication
+            String[] pattern = DatagenHelper.DatagenConfig.TOOL_PATTERNS.getOrDefault(toolType, new String[]{});
+            for (String line : pattern) {
+                builder.pattern(line);
             }
 
             builder.input('M', material);
@@ -260,25 +233,10 @@ public class ModRecipeProvider extends FabricRecipeProvider {
                                         ItemConvertible output, String itemName, ItemConvertible material) {
             ShapedRecipeJsonBuilder builder = ctx.createShaped(RecipeCategory.COMBAT, output);
 
-            switch (armorType.toLowerCase()) {
-                case "helmet" -> {
-                    builder.pattern("MMM");
-                    builder.pattern("M M");
-                }
-                case "chestplate" -> {
-                    builder.pattern("M M");
-                    builder.pattern("MMM");
-                    builder.pattern("MMM");
-                }
-                case "leggings" -> {
-                    builder.pattern("MMM");
-                    builder.pattern("M M");
-                    builder.pattern("M M");
-                }
-                case "boots" -> {
-                    builder.pattern("M M");
-                    builder.pattern("M M");
-                }
+            // Use patterns from DatagenHelper configuration - eliminates duplication
+            String[] pattern = DatagenHelper.DatagenConfig.ARMOR_PATTERNS.getOrDefault(armorType, new String[]{});
+            for (String line : pattern) {
+                builder.pattern(line);
             }
 
             builder.input('M', material);

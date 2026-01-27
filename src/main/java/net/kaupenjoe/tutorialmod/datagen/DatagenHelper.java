@@ -483,10 +483,7 @@ public class DatagenHelper {
         // Tool generation exclusions
         public static final Map<String, String> TOOL_EXCLUSIONS = Map.ofEntries(
             Map.entry("sword", "obsidian"),
-            Map.entry("axe", "obsidian"),
-            Map.entry("hammer", null),
-            Map.entry("shovel", null),
-            Map.entry("hoe", null)
+            Map.entry("axe", "obsidian")
         );
     }
 
