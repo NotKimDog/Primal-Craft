@@ -17,9 +17,9 @@
     ]
   },
   "pattern": [
-    " M ",
-    " M ",
-    " S "
+    "M",
+    "M",
+    "S"
   ],
   "result": {
     "count": 1,

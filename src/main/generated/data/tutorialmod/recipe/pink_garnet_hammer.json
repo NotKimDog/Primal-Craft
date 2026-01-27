@@ -18,8 +18,8 @@
   },
   "pattern": [
     "MMM",
-    " S ",
-    " S "
+    "MS ",
+    "MS "
   ],
   "result": {
     "count": 1,
