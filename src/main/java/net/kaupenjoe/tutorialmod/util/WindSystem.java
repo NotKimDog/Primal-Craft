@@ -1,5 +1,6 @@
 package net.kaupenjoe.tutorialmod.util;
 
+import net.kaupenjoe.tutorialmod.TutorialMod;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -23,21 +24,22 @@ public class WindSystem {
     private static final Random random = new Random();
 
     // Wind update frequency
-    private static final int WIND_UPDATE_INTERVAL = 100; // ~5 seconds
+    private static final int WIND_UPDATE_INTERVAL = 100;
     private static int windTickCounter = 0;
+    private static int windUpdates = 0;
 
     /**
      * Custom weather types with specific behaviors
      */
     public enum CustomWeatherType {
-        CLEAR(0.1, 0.4, false, 20.0),           // Calm, mild
-        WINDY(1.2, 2.0, false, 15.0),          // Strong wind, no rain
-        RAIN(1.0, 1.8, false, 10.0),           // Moderate wind + rain
-        THUNDERSTORM(2.0, 3.5, true, 8.0),     // Strong wind + thunder
-        BLIZZARD(2.5, 4.5, true, -15.0),       // Extreme wind + snow + cold
-        HEATWAVE(0.3, 1.0, false, 40.0),       // Light wind, extreme heat
-        DUST_STORM(3.5, 5.0, false, 35.0),     // Extreme wind, hot, reduced visibility
-        FOGGY(0.05, 0.2, false, 12.0);          // Very light wind, cool
+        CLEAR(0.1, 0.4, false, 20.0),
+        WINDY(1.2, 2.0, false, 15.0),
+        RAIN(1.0, 1.8, false, 10.0),
+        THUNDERSTORM(2.0, 3.5, true, 8.0),
+        BLIZZARD(2.5, 4.5, true, -15.0),
+        HEATWAVE(0.3, 1.0, false, 40.0),
+        DUST_STORM(3.5, 5.0, false, 35.0),
+        FOGGY(0.05, 0.2, false, 12.0);
 
         public final double minStrength;
         public final double maxStrength;
@@ -53,13 +55,13 @@ public class WindSystem {
     }
 
     public static class WindData {
-        public Vec3d direction;        // Wind direction vector (normalized)
-        public double baseStrength;    // Base wind strength (0-1)
-        public double gustStrength;    // Current gust multiplier (0-2)
+        public Vec3d direction;
+        public double baseStrength;
+        public double gustStrength;
         public long lastUpdate;
-        public double temperature;     // Affects wind behavior
-        public boolean stormy;         // Storm conditions amplify wind
-        public CustomWeatherType customWeather; // Current custom weather state
+        public double temperature;
+        public boolean stormy;
+        public CustomWeatherType customWeather;
 
         public WindData() {
             this.direction = new Vec3d(1, 0, 0);
@@ -73,11 +75,11 @@ public class WindSystem {
 
         public double getEffectiveStrength() {
             double effective = baseStrength * gustStrength;
-            if (stormy) effective *= 3.0; // Increased from 2.2
+            if (stormy) effective *= 3.0;
             if (customWeather == CustomWeatherType.BLIZZARD || customWeather == CustomWeatherType.DUST_STORM) {
-                effective *= 2.5; // Increased from 1.8
+                effective *= 2.5;
             }
-            return Math.min(effective, 15.0); // Increased cap from 5.0 to 15.0 blocks/sec (~33 mph)
+            return Math.min(effective, 15.0);
         }
 
         public Vec3d getWindForce() {
@@ -92,27 +94,36 @@ public class WindSystem {
         String worldKey = world.getRegistryKey().getValue().toString();
         WindData wind = worldWindData.computeIfAbsent(worldKey, k -> new WindData());
 
-        // Update base strength (weather-dependent) - checked every tick for instant response
+        // Update base strength (weather-dependent)
         boolean raining = world.isRaining();
         boolean thundering = world.isThundering();
         wind.stormy = thundering;
 
-        // Auto-detect custom weather based on vanilla states + temperature
         updateCustomWeather(wind, raining, thundering);
 
         windTickCounter++;
         if (windTickCounter >= WIND_UPDATE_INTERVAL) {
             windTickCounter = 0;
+            windUpdates++;
+
+            TutorialMod.LOGGER.debug("💨 [WIND_UPDATE] Event #{} - World: {}", windUpdates, worldKey);
+            TutorialMod.LOGGER.trace("   ├─ Weather: Rain={}, Thunder={}, Custom={}",
+                raining, thundering, wind.customWeather.name());
+            TutorialMod.LOGGER.trace("   ├─ Strength: {} (base: {}, gust: {})",
+                String.format("%.2f", wind.getEffectiveStrength()),
+                String.format("%.2f", wind.baseStrength),
+                String.format("%.2f", wind.gustStrength));
+            TutorialMod.LOGGER.trace("   └─ Temperature: {}°C", String.format("%.1f", wind.temperature));
 
             // Gradual wind direction shift
-            double angleShift = (random.nextDouble() - 0.5) * 0.3; // ±0.3 radians
+            double angleShift = (random.nextDouble() - 0.5) * 0.3;
             Vec3d current = wind.direction;
             double currentAngle = Math.atan2(current.z, current.x);
             double newAngle = currentAngle + angleShift;
 
             wind.direction = new Vec3d(
                 Math.cos(newAngle),
-                (random.nextDouble() - 0.5) * 0.1, // Slight vertical component
+                (random.nextDouble() - 0.5) * 0.1,
                 Math.sin(newAngle)
             ).normalize();
         }
@@ -124,7 +135,7 @@ public class WindSystem {
             wind.baseStrength = weather.minStrength + random.nextDouble() * (weather.maxStrength - weather.minStrength);
 
             // Smooth gust transitions - INCREASED RANGE
-            double targetGust = 0.5 + random.nextDouble() * 2.0; // Increased from 1.5 (now 0.5-2.5)
+            double targetGust = 0.5 + random.nextDouble() * 2.0;
             wind.gustStrength += (targetGust - wind.gustStrength) * 0.2;
         }
 

@@ -48,27 +48,29 @@ public class DatagenHelper {
         ALL_SUFFIXES.addAll(Arrays.asList(BLOCK_SUFFIXES));
     }
 
-    // ===== CENTRALIZED MATERIAL SUFFIXES =====
-    public static class MaterialSuffixes {
-        public static final String[] ALL_SUFFIXES = {
-            "_sword", "_pickaxe", "_shovel", "_axe", "_hoe", "_hammer",
-            "_helmet", "_chestplate", "_leggings", "_boots",
-            "_block", "_ore", "_stairs", "_slab", "_wall", "_fence", "_door",
-            "_trapdoor", "_button", "_pressure_plate"
-        };
-    }
-
     /**
      * Get all registered items with their names (cached)
      */
     public static List<ItemEntry> getAllItems() {
-        if (cachedItems != null) return cachedItems;
+        if (cachedItems != null) {
+            TutorialMod.LOGGER.debug("📦 [CACHE HIT] Item cache hit: {} items retrieved from cache", cachedItems.size());
+            return cachedItems;
+        }
 
         synchronized (DatagenHelper.class) {
-            if (cachedItems != null) return cachedItems;
+            if (cachedItems != null) {
+                TutorialMod.LOGGER.debug("📦 [CACHE HIT] Item cache hit after lock acquisition: {} items", cachedItems.size());
+                return cachedItems;
+            }
 
+            TutorialMod.LOGGER.debug("📦 [CACHE MISS] Item cache miss - initiating scan from ModItems.class");
+            long startTime = System.nanoTime();
             List<ItemEntry> items = scanItems(ModItems.class);
             cachedItems = Collections.unmodifiableList(items);
+            long elapsed = (System.nanoTime() - startTime) / 1_000_000;
+
+            TutorialMod.LOGGER.info("✅ [ITEMS CACHED] Successfully scanned and cached {} items in {}ms", cachedItems.size(), elapsed);
+            TutorialMod.LOGGER.debug("   └─ Cache now contains: {} unmodifiable item entries", cachedItems.size());
             return cachedItems;
         }
     }
@@ -77,49 +79,27 @@ public class DatagenHelper {
      * Get all registered blocks with their names (cached)
      */
     public static List<BlockEntry> getAllBlocks() {
-        if (cachedBlocks != null) return cachedBlocks;
-
-        synchronized (DatagenHelper.class) {
-            if (cachedBlocks != null) return cachedBlocks;
-
-            List<BlockEntry> blocks = scanBlocks(ModBlocks.class);
-            cachedBlocks = Collections.unmodifiableList(blocks);
+        if (cachedBlocks != null) {
+            TutorialMod.LOGGER.debug("🧱 [CACHE HIT] Block cache hit: {} blocks retrieved from cache", cachedBlocks.size());
             return cachedBlocks;
         }
-    }
 
-    /**
-     * Generic reflection scanner - eliminates code duplication
-     */
-    private static <T> List<String[]> scanGeneric(Class<?> modClass, Class<T> typeClass) {
-        List<String[]> results = new ArrayList<>();
-
-        try {
-            Field[] fields = modClass.getDeclaredFields();
-            for (Field field : fields) {
-                // Optimize: check modifiers first (fastest)
-                int mods = field.getModifiers();
-                if ((mods & (Modifier.PUBLIC | Modifier.STATIC | Modifier.FINAL)) !=
-                    (Modifier.PUBLIC | Modifier.STATIC | Modifier.FINAL)) {
-                    continue;
-                }
-
-                // Then check type
-                if (!typeClass.isAssignableFrom(field.getType())) {
-                    continue;
-                }
-
-                // Finally get value
-                field.setAccessible(true);
-                Object value = field.get(null);
-                String name = field.getName().toLowerCase();
-                results.add(new String[]{name, String.valueOf(System.identityHashCode(value))});
+        synchronized (DatagenHelper.class) {
+            if (cachedBlocks != null) {
+                TutorialMod.LOGGER.debug("🧱 [CACHE HIT] Block cache hit after lock acquisition: {} blocks", cachedBlocks.size());
+                return cachedBlocks;
             }
-        } catch (Exception e) {
-            TutorialMod.LOGGER.error("Failed to scan {} for {}: {}", modClass.getSimpleName(), typeClass.getSimpleName(), e.getMessage());
-        }
 
-        return results;
+            TutorialMod.LOGGER.debug("🧱 [CACHE MISS] Block cache miss - initiating scan from ModBlocks.class");
+            long startTime = System.nanoTime();
+            List<BlockEntry> blocks = scanBlocks(ModBlocks.class);
+            cachedBlocks = Collections.unmodifiableList(blocks);
+            long elapsed = (System.nanoTime() - startTime) / 1_000_000;
+
+            TutorialMod.LOGGER.info("✅ [BLOCKS CACHED] Successfully scanned and cached {} blocks in {}ms", cachedBlocks.size(), elapsed);
+            TutorialMod.LOGGER.debug("   └─ Cache now contains: {} unmodifiable block entries", cachedBlocks.size());
+            return cachedBlocks;
+        }
     }
 
     /**
@@ -127,19 +107,32 @@ public class DatagenHelper {
      */
     private static List<ItemEntry> scanItems(Class<?> modClass) {
         List<ItemEntry> results = new ArrayList<>();
+        int scannedFields = 0;
+        int foundItems = 0;
+        int skippedModifier = 0;
+        int skippedType = 0;
 
         try {
+            long startTime = System.nanoTime();
             Field[] fields = modClass.getDeclaredFields();
+            scannedFields = fields.length;
+
+            TutorialMod.LOGGER.debug("🔍 [ITEM SCAN START] Scanning {} fields in {}", fields.length, modClass.getSimpleName());
+            TutorialMod.LOGGER.debug("   ├─ Scanning for public static final Item fields");
+            TutorialMod.LOGGER.debug("   └─ Starting reflective field analysis...");
+
             for (Field field : fields) {
                 // Optimize: check modifiers first (fastest)
                 int mods = field.getModifiers();
                 if ((mods & (Modifier.PUBLIC | Modifier.STATIC | Modifier.FINAL)) !=
                     (Modifier.PUBLIC | Modifier.STATIC | Modifier.FINAL)) {
+                    skippedModifier++;
                     continue;
                 }
 
                 // Then check type
                 if (!Item.class.isAssignableFrom(field.getType())) {
+                    skippedType++;
                     continue;
                 }
 
@@ -148,9 +141,21 @@ public class DatagenHelper {
                 Item value = (Item) field.get(null);
                 String name = field.getName().toLowerCase();
                 results.add(new ItemEntry(name, value));
+                foundItems++;
+
+                TutorialMod.LOGGER.trace("   ✓ Found item: {} (type: {})", name, field.getType().getSimpleName());
             }
+
+            long elapsed = (System.nanoTime() - startTime) / 1_000_000;
+            TutorialMod.LOGGER.info("✅ [ITEM SCAN COMPLETE] Scanned {} total fields in {}ms", scannedFields, elapsed);
+            TutorialMod.LOGGER.debug("   ├─ ✓ Found {} item fields", foundItems);
+            TutorialMod.LOGGER.debug("   ├─ ⊘ Skipped {} non-matching modifiers", skippedModifier);
+            TutorialMod.LOGGER.debug("   └─ ⊘ Skipped {} non-Item type fields", skippedType);
         } catch (Exception e) {
-            TutorialMod.LOGGER.error("Failed to scan {} for items: {}", modClass.getSimpleName(), e.getMessage());
+            TutorialMod.LOGGER.error("❌ [ITEM SCAN FAILED] Exception scanning {} for items", modClass.getSimpleName());
+            TutorialMod.LOGGER.error("   ├─ Error Type: {}", e.getClass().getSimpleName());
+            TutorialMod.LOGGER.error("   ├─ Error Message: {}", e.getMessage());
+            TutorialMod.LOGGER.error("   └─ Stack trace follows:", e);
         }
 
         return results;
@@ -161,19 +166,32 @@ public class DatagenHelper {
      */
     private static List<BlockEntry> scanBlocks(Class<?> modClass) {
         List<BlockEntry> results = new ArrayList<>();
+        int scannedFields = 0;
+        int foundBlocks = 0;
+        int skippedModifier = 0;
+        int skippedType = 0;
 
         try {
+            long startTime = System.nanoTime();
             Field[] fields = modClass.getDeclaredFields();
+            scannedFields = fields.length;
+
+            TutorialMod.LOGGER.debug("🔍 [BLOCK SCAN START] Scanning {} fields in {}", fields.length, modClass.getSimpleName());
+            TutorialMod.LOGGER.debug("   ├─ Scanning for public static final Block fields");
+            TutorialMod.LOGGER.debug("   └─ Starting reflective field analysis...");
+
             for (Field field : fields) {
                 // Optimize: check modifiers first (fastest)
                 int mods = field.getModifiers();
                 if ((mods & (Modifier.PUBLIC | Modifier.STATIC | Modifier.FINAL)) !=
                     (Modifier.PUBLIC | Modifier.STATIC | Modifier.FINAL)) {
+                    skippedModifier++;
                     continue;
                 }
 
                 // Then check type
                 if (!Block.class.isAssignableFrom(field.getType())) {
+                    skippedType++;
                     continue;
                 }
 
@@ -182,9 +200,21 @@ public class DatagenHelper {
                 Block value = (Block) field.get(null);
                 String name = field.getName().toLowerCase();
                 results.add(new BlockEntry(name, value));
+                foundBlocks++;
+
+                TutorialMod.LOGGER.trace("   ✓ Found block: {} (type: {})", name, field.getType().getSimpleName());
             }
+
+            long elapsed = (System.nanoTime() - startTime) / 1_000_000;
+            TutorialMod.LOGGER.info("✅ [BLOCK SCAN COMPLETE] Scanned {} total fields in {}ms", scannedFields, elapsed);
+            TutorialMod.LOGGER.debug("   ├─ ✓ Found {} block fields", foundBlocks);
+            TutorialMod.LOGGER.debug("   ├─ ⊘ Skipped {} non-matching modifiers", skippedModifier);
+            TutorialMod.LOGGER.debug("   └─ ⊘ Skipped {} non-Block type fields", skippedType);
         } catch (Exception e) {
-            TutorialMod.LOGGER.error("Failed to scan {} for blocks: {}", modClass.getSimpleName(), e.getMessage());
+            TutorialMod.LOGGER.error("❌ [BLOCK SCAN FAILED] Exception scanning {} for blocks", modClass.getSimpleName());
+            TutorialMod.LOGGER.error("   ├─ Error Type: {}", e.getClass().getSimpleName());
+            TutorialMod.LOGGER.error("   ├─ Error Message: {}", e.getMessage());
+            TutorialMod.LOGGER.error("   └─ Stack trace follows:", e);
         }
 
         return results;
@@ -193,86 +223,379 @@ public class DatagenHelper {
     // ===== ITEM FILTERING METHODS =====
 
     /**
-     * Filter items by keywords (cached) - UNIFIED METHOD
+     * Filter items by keywords (cached)
      */
     public static List<ItemEntry> getItemsContaining(String... keywords) {
         String cacheKey = String.join("|", keywords);
-        return itemCategoryCache.computeIfAbsent(cacheKey, key ->
-            getAllItems().stream()
-                .filter(entry -> containsAny(entry.name(), keywords))
-                .collect(Collectors.toUnmodifiableList())
-        );
+        TutorialMod.LOGGER.debug("🔎 [ITEM FILTER] Filtering items by keywords: {}", cacheKey);
+
+        List<ItemEntry> result = itemCategoryCache.computeIfAbsent(cacheKey, key -> {
+            TutorialMod.LOGGER.debug("   ├─ Cache miss for keyword set: {}", key);
+            long startTime = System.nanoTime();
+
+            List<ItemEntry> filtered = getAllItems().stream()
+                .filter(entry -> {
+                    boolean matches = containsAny(entry.name(), keywords);
+                    if (matches) {
+                        TutorialMod.LOGGER.trace("     ✓ Match: {} (contains {})", entry.name(), Arrays.toString(keywords));
+                    }
+                    return matches;
+                })
+                .collect(Collectors.toUnmodifiableList());
+
+            long elapsed = (System.nanoTime() - startTime) / 1_000_000;
+            TutorialMod.LOGGER.debug("   ├─ Filtered {} items from {} total in {}ms", filtered.size(), getAllItems().size(), elapsed);
+            TutorialMod.LOGGER.debug("   └─ Cached for future use");
+
+            return filtered;
+        });
+
+        TutorialMod.LOGGER.debug("   └─ Returning {} matching items", result.size());
+        return result;
+    }
+
+    public static List<ItemEntry> getSwords() {
+        TutorialMod.LOGGER.debug("⚔️  [SWORD FILTER] Retrieving all sword items");
+        List<ItemEntry> result = getFromCache("sword", true);
+        TutorialMod.LOGGER.debug("   └─ Found {} swords", result.size());
+        return result;
+    }
+
+    public static List<ItemEntry> getPickaxes() {
+        TutorialMod.LOGGER.debug("⛏️  [PICKAXE FILTER] Retrieving all pickaxe items (excluding hammers)");
+        // Exclude hammers from pickaxes
+        List<ItemEntry> result = getAllItems().stream()
+            .filter(e -> {
+                boolean matches = e.name().contains("pickaxe") && !e.name().contains("hammer");
+                if (matches) {
+                    TutorialMod.LOGGER.trace("     ✓ Include: {}", e.name());
+                }
+                return matches;
+            })
+            .collect(Collectors.toUnmodifiableList());
+        TutorialMod.LOGGER.debug("   └─ Found {} pickaxes (filtered {} hammers)", result.size(), getAllItems().stream().filter(e -> e.name().contains("hammer")).count());
+        return result;
+    }
+
+    public static List<ItemEntry> getHammers() {
+        TutorialMod.LOGGER.debug("🔨 [HAMMER FILTER] Retrieving all hammer items");
+        List<ItemEntry> result = getFromCache("hammer", true);
+        TutorialMod.LOGGER.debug("   └─ Found {} hammers", result.size());
+        return result;
+    }
+
+    public static List<ItemEntry> getShovels() {
+        TutorialMod.LOGGER.debug("🏗️  [SHOVEL FILTER] Retrieving all shovel items");
+        List<ItemEntry> result = getFromCache("shovel", true);
+        TutorialMod.LOGGER.debug("   └─ Found {} shovels", result.size());
+        return result;
+    }
+
+    public static List<ItemEntry> getAxes() {
+        TutorialMod.LOGGER.debug("🪓 [AXE FILTER] Retrieving all axe items");
+        List<ItemEntry> result = getFromCache("axe", true);
+        TutorialMod.LOGGER.debug("   └─ Found {} axes", result.size());
+        return result;
+    }
+
+    public static List<ItemEntry> getHoes() {
+        TutorialMod.LOGGER.debug("🌾 [HOE FILTER] Retrieving all hoe items");
+        List<ItemEntry> result = getFromCache("hoe", true);
+        TutorialMod.LOGGER.debug("   └─ Found {} hoes", result.size());
+        return result;
+    }
+
+    public static List<ItemEntry> getHelmets() {
+        TutorialMod.LOGGER.debug("🎖️  [HELMET FILTER] Retrieving all helmet items");
+        List<ItemEntry> result = getFromCache("helmet", true);
+        TutorialMod.LOGGER.debug("   └─ Found {} helmets", result.size());
+        return result;
+    }
+
+    public static List<ItemEntry> getChestplates() {
+        TutorialMod.LOGGER.debug("🛡️  [CHESTPLATE FILTER] Retrieving all chestplate items");
+        List<ItemEntry> result = getFromCache("chestplate", true);
+        TutorialMod.LOGGER.debug("   └─ Found {} chestplates", result.size());
+        return result;
+    }
+
+    public static List<ItemEntry> getLeggings() {
+        TutorialMod.LOGGER.debug("👖 [LEGGINGS FILTER] Retrieving all leggings items");
+        List<ItemEntry> result = getAllItems().stream()
+            .filter(e -> {
+                boolean matches = e.name().contains("legging") || e.name().contains("bottoms");
+                if (matches) {
+                    TutorialMod.LOGGER.trace("     ✓ Include: {}", e.name());
+                }
+                return matches;
+            })
+            .collect(Collectors.toUnmodifiableList());
+        TutorialMod.LOGGER.debug("   └─ Found {} leggings", result.size());
+        return result;
+    }
+
+    public static List<ItemEntry> getBoots() {
+        TutorialMod.LOGGER.debug("👢 [BOOTS FILTER] Retrieving all boots items");
+        List<ItemEntry> result = getFromCache("boots", true);
+        TutorialMod.LOGGER.debug("   └─ Found {} boots", result.size());
+        return result;
     }
 
     /**
-     * Filter items by keywords with exclusions (cached) - UNIFIED METHOD
+     * Get all tools (optimized)
      */
-    public static List<ItemEntry> getItemsMatching(String[] exclusions, String... inclusions) {
-        String cacheKey = "items_" + String.join("|", inclusions) +
-            (exclusions != null ? "_ex_" + String.join("|", exclusions) : "");
-        return itemCategoryCache.computeIfAbsent(cacheKey, key ->
-            getAllItems().stream()
-                .filter(e -> containsAny(e.name(), inclusions))
-                .filter(e -> exclusions == null || !containsAny(e.name(), exclusions))
-                .collect(Collectors.toUnmodifiableList())
-        );
+    public static List<ItemEntry> getTools() {
+        TutorialMod.LOGGER.debug("🛠️  [TOOLS FILTER] Retrieving all tool items (swords, pickaxes, shovels, axes, hoes, hammers)");
+        long startTime = System.nanoTime();
+
+        List<ItemEntry> result = getAllItems().stream()
+            .filter(e -> {
+                String name = e.name();
+                boolean isTool = name.contains("sword") || name.contains("pickaxe") || name.contains("shovel") ||
+                       name.contains("axe") || name.contains("hoe") || name.contains("hammer");
+                if (isTool) {
+                    TutorialMod.LOGGER.trace("     ✓ Tool: {}", name);
+                }
+                return isTool;
+            })
+            .collect(Collectors.toUnmodifiableList());
+
+        long elapsed = (System.nanoTime() - startTime) / 1_000_000;
+        TutorialMod.LOGGER.debug("   └─ Found {} total tools in {}ms", result.size(), elapsed);
+        return result;
     }
 
-    // ===== AUTO-GENERATED CONVENIENCE METHODS (via unified getItemsMatching) =====
-    public static List<ItemEntry> getSwords() { return getItemsContaining("sword"); }
-    public static List<ItemEntry> getPickaxes() { return getItemsMatching(new String[]{"hammer"}, "pickaxe"); }
-    public static List<ItemEntry> getHammers() { return getItemsContaining("hammer"); }
-    public static List<ItemEntry> getShovels() { return getItemsContaining("shovel"); }
-    public static List<ItemEntry> getAxes() { return getItemsContaining("axe"); }
-    public static List<ItemEntry> getHoes() { return getItemsContaining("hoe"); }
-    public static List<ItemEntry> getHelmets() { return getItemsContaining("helmet"); }
-    public static List<ItemEntry> getChestplates() { return getItemsContaining("chestplate"); }
-    public static List<ItemEntry> getLeggings() { return getItemsContaining("legging", "bottoms"); }
-    public static List<ItemEntry> getBoots() { return getItemsContaining("boots"); }
-    public static List<ItemEntry> getTools() { return getItemsContaining("sword", "pickaxe", "shovel", "axe", "hoe", "hammer"); }
-    public static List<ItemEntry> getArmor() { return getItemsContaining("helmet", "chestplate", "legging", "boots"); }
-    public static List<ItemEntry> getTrimmableArmor() { return getItemsMatching(new String[]{"pajama"}, "helmet", "chestplate", "legging", "boots"); }
+    /**
+     * Get all armor pieces
+     */
+    public static List<ItemEntry> getArmor() {
+        TutorialMod.LOGGER.debug("🗡️  [ARMOR FILTER] Retrieving all armor items (helmets, chestplates, leggings, boots)");
+        long startTime = System.nanoTime();
+
+        List<ItemEntry> result = getAllItems().stream()
+            .filter(e -> {
+                String name = e.name();
+                boolean isArmor = name.contains("helmet") || name.contains("chestplate") ||
+                       name.contains("legging") || name.contains("boots");
+                if (isArmor) {
+                    TutorialMod.LOGGER.trace("     ✓ Armor: {}", name);
+                }
+                return isArmor;
+            })
+            .collect(Collectors.toUnmodifiableList());
+
+        long elapsed = (System.nanoTime() - startTime) / 1_000_000;
+        TutorialMod.LOGGER.debug("   └─ Found {} total armor pieces in {}ms", result.size(), elapsed);
+        return result;
+    }
+
+    /**
+     * Get trimmable armor (excludes pajamas)
+     */
+    public static List<ItemEntry> getTrimmableArmor() {
+        TutorialMod.LOGGER.debug("✨ [TRIMMABLE ARMOR FILTER] Retrieving trimmable armor items (excluding pajamas)");
+        long startTime = System.nanoTime();
+
+        List<ItemEntry> result = getArmor().stream()
+            .filter(entry -> {
+                boolean isTrimmable = !entry.name().contains("pajama");
+                if (!isTrimmable) {
+                    TutorialMod.LOGGER.trace("     ⊘ Excluded (pajama): {}", entry.name());
+                }
+                return isTrimmable;
+            })
+            .collect(Collectors.toUnmodifiableList());
+
+        long elapsed = (System.nanoTime() - startTime) / 1_000_000;
+        int excluded = getArmor().size() - result.size();
+        TutorialMod.LOGGER.debug("   └─ Found {} trimmable items (excluded {} pajamas) in {}ms", result.size(), excluded, elapsed);
+        return result;
+    }
+
+    /**
+     * Helper method for cached single-keyword filtering
+     */
+    private static List<ItemEntry> getFromCache(String keyword, boolean cached) {
+        if (!cached) {
+            TutorialMod.LOGGER.debug("   ├─ Cache disabled for keyword: {}", keyword);
+            List<ItemEntry> result = getAllItems().stream()
+                .filter(e -> {
+                    boolean matches = e.name().contains(keyword);
+                    if (matches) {
+                        TutorialMod.LOGGER.trace("     ✓ Match: {}", e.name());
+                    }
+                    return matches;
+                })
+                .collect(Collectors.toUnmodifiableList());
+            TutorialMod.LOGGER.debug("   └─ Found {} items (uncached)", result.size());
+            return result;
+        }
+
+        return itemCategoryCache.computeIfAbsent(keyword, key -> {
+            TutorialMod.LOGGER.debug("   ├─ Cache miss for keyword: {}", key);
+            long startTime = System.nanoTime();
+
+            List<ItemEntry> filtered = getAllItems().stream()
+                .filter(e -> {
+                    boolean matches = e.name().contains(key);
+                    if (matches) {
+                        TutorialMod.LOGGER.trace("     ✓ Match: {}", e.name());
+                    }
+                    return matches;
+                })
+                .collect(Collectors.toUnmodifiableList());
+
+            long elapsed = (System.nanoTime() - startTime) / 1_000_000;
+            TutorialMod.LOGGER.debug("   └─ Found {} items in {}ms and cached", filtered.size(), elapsed);
+
+            return filtered;
+        });
+    }
 
     // ===== BLOCK FILTERING METHODS =====
 
     /**
-     * Filter blocks by keywords (cached) - UNIFIED METHOD
+     * Filter blocks by keywords (cached)
      */
     public static List<BlockEntry> getBlocksContaining(String... keywords) {
         String cacheKey = "blocks_" + String.join("|", keywords);
-        return blockCategoryCache.computeIfAbsent(cacheKey, key ->
-            getAllBlocks().stream()
-                .filter(entry -> containsAny(entry.name(), keywords))
-                .collect(Collectors.toUnmodifiableList())
-        );
+        TutorialMod.LOGGER.debug("🔎 [BLOCK FILTER] Filtering blocks by keywords: {}", Arrays.toString(keywords));
+
+        List<BlockEntry> result = blockCategoryCache.computeIfAbsent(cacheKey, key -> {
+            TutorialMod.LOGGER.debug("   ├─ Cache miss for keyword set: {}", key);
+            long startTime = System.nanoTime();
+
+            List<BlockEntry> filtered = getAllBlocks().stream()
+                .filter(entry -> {
+                    boolean matches = containsAny(entry.name(), keywords);
+                    if (matches) {
+                        TutorialMod.LOGGER.trace("     ✓ Match: {} (contains {})", entry.name(), Arrays.toString(keywords));
+                    }
+                    return matches;
+                })
+                .collect(Collectors.toUnmodifiableList());
+
+            long elapsed = (System.nanoTime() - startTime) / 1_000_000;
+            TutorialMod.LOGGER.debug("   ├─ Filtered {} blocks from {} total in {}ms", filtered.size(), getAllBlocks().size(), elapsed);
+            TutorialMod.LOGGER.debug("   └─ Cached for future use");
+
+            return filtered;
+        });
+
+        TutorialMod.LOGGER.debug("   └─ Returning {} matching blocks", result.size());
+        return result;
+    }
+
+    public static List<BlockEntry> getOres() {
+        TutorialMod.LOGGER.debug("⛏️  [ORE FILTER] Retrieving all ore blocks");
+        List<BlockEntry> result = getFromBlockCache("_ore");
+        TutorialMod.LOGGER.debug("   └─ Found {} ores", result.size());
+        return result;
+    }
+
+    public static List<BlockEntry> getStairs() {
+        TutorialMod.LOGGER.debug("🪜 [STAIRS FILTER] Retrieving all stair blocks");
+        List<BlockEntry> result = getFromBlockCache("stairs");
+        TutorialMod.LOGGER.debug("   └─ Found {} stair variants", result.size());
+        return result;
+    }
+
+    public static List<BlockEntry> getSlabs() {
+        TutorialMod.LOGGER.debug("📦 [SLAB FILTER] Retrieving all slab blocks");
+        List<BlockEntry> result = getFromBlockCache("slab");
+        TutorialMod.LOGGER.debug("   └─ Found {} slab variants", result.size());
+        return result;
+    }
+
+    public static List<BlockEntry> getFences() {
+        TutorialMod.LOGGER.debug("🚧 [FENCE FILTER] Retrieving all fence blocks");
+        List<BlockEntry> result = getFromBlockCache("fence");
+        TutorialMod.LOGGER.debug("   └─ Found {} fence variants", result.size());
+        return result;
+    }
+
+    public static List<BlockEntry> getWalls() {
+        TutorialMod.LOGGER.debug("🧱 [WALL FILTER] Retrieving all wall blocks");
+        List<BlockEntry> result = getFromBlockCache("wall");
+        TutorialMod.LOGGER.debug("   └─ Found {} wall variants", result.size());
+        return result;
+    }
+
+    public static List<BlockEntry> getDoors() {
+        TutorialMod.LOGGER.debug("🚪 [DOOR FILTER] Retrieving all door blocks");
+        List<BlockEntry> result = getFromBlockCache("door");
+        TutorialMod.LOGGER.debug("   └─ Found {} door variants", result.size());
+        return result;
+    }
+
+    public static List<BlockEntry> getTrapdoors() {
+        TutorialMod.LOGGER.debug("🪵 [TRAPDOOR FILTER] Retrieving all trapdoor blocks");
+        List<BlockEntry> result = getFromBlockCache("trapdoor");
+        TutorialMod.LOGGER.debug("   └─ Found {} trapdoor variants", result.size());
+        return result;
+    }
+
+    public static List<BlockEntry> getButtons() {
+        TutorialMod.LOGGER.debug("🔘 [BUTTON FILTER] Retrieving all button blocks");
+        List<BlockEntry> result = getFromBlockCache("button");
+        TutorialMod.LOGGER.debug("   └─ Found {} button variants", result.size());
+        return result;
+    }
+
+    public static List<BlockEntry> getPressurePlates() {
+        TutorialMod.LOGGER.debug("⚖️  [PRESSURE PLATE FILTER] Retrieving all pressure plate blocks");
+        List<BlockEntry> result = getFromBlockCache("pressure_plate");
+        TutorialMod.LOGGER.debug("   └─ Found {} pressure plate variants", result.size());
+        return result;
+    }
+
+    public static List<BlockEntry> getLogs() {
+        TutorialMod.LOGGER.debug("🌳 [LOG FILTER] Retrieving all log and wood blocks");
+        List<BlockEntry> result = getAllBlocks().stream()
+            .filter(e -> {
+                boolean matches = e.name().contains("log") || e.name().contains("wood");
+                if (matches) {
+                    TutorialMod.LOGGER.trace("     ✓ Match: {}", e.name());
+                }
+                return matches;
+            })
+            .collect(Collectors.toUnmodifiableList());
+        TutorialMod.LOGGER.debug("   └─ Found {} log/wood variants", result.size());
+        return result;
+    }
+
+    public static List<BlockEntry> getPlanks() {
+        TutorialMod.LOGGER.debug("🪵 [PLANKS FILTER] Retrieving all plank blocks");
+        List<BlockEntry> result = getFromBlockCache("planks");
+        TutorialMod.LOGGER.debug("   └─ Found {} plank variants", result.size());
+        return result;
     }
 
     /**
-     * Filter blocks by keywords with exclusions (cached) - UNIFIED METHOD
+     * Helper method for cached single-keyword block filtering
      */
-    public static List<BlockEntry> getBlocksMatching(String[] exclusions, String... inclusions) {
-        String cacheKey = "blocks_" + String.join("|", inclusions) +
-            (exclusions != null ? "_ex_" + String.join("|", exclusions) : "");
-        return blockCategoryCache.computeIfAbsent(cacheKey, key ->
-            getAllBlocks().stream()
-                .filter(e -> containsAny(e.name(), inclusions))
-                .filter(e -> exclusions == null || !containsAny(e.name(), exclusions))
-                .collect(Collectors.toUnmodifiableList())
-        );
-    }
+    private static List<BlockEntry> getFromBlockCache(String keyword) {
+        String cacheKey = "block_" + keyword;
+        return blockCategoryCache.computeIfAbsent(cacheKey, key -> {
+            TutorialMod.LOGGER.debug("   ├─ Cache miss for block keyword: {}", keyword);
+            long startTime = System.nanoTime();
 
-    // ===== AUTO-GENERATED CONVENIENCE METHODS (via unified getBlocksMatching) =====
-    public static List<BlockEntry> getOres() { return getBlocksContaining("ore"); }
-    public static List<BlockEntry> getStairs() { return getBlocksContaining("stairs"); }
-    public static List<BlockEntry> getSlabs() { return getBlocksContaining("slab"); }
-    public static List<BlockEntry> getFences() { return getBlocksContaining("fence"); }
-    public static List<BlockEntry> getWalls() { return getBlocksContaining("wall"); }
-    public static List<BlockEntry> getDoors() { return getBlocksContaining("door"); }
-    public static List<BlockEntry> getTrapdoors() { return getBlocksContaining("trapdoor"); }
-    public static List<BlockEntry> getButtons() { return getBlocksContaining("button"); }
-    public static List<BlockEntry> getPressurePlates() { return getBlocksContaining("pressure_plate"); }
-    public static List<BlockEntry> getLogs() { return getBlocksContaining("log", "wood"); }
-    public static List<BlockEntry> getPlanks() { return getBlocksContaining("planks"); }
+            List<BlockEntry> filtered = getAllBlocks().stream()
+                .filter(e -> {
+                    boolean matches = e.name().contains(keyword);
+                    if (matches) {
+                        TutorialMod.LOGGER.trace("     ✓ Match: {}", e.name());
+                    }
+                    return matches;
+                })
+                .collect(Collectors.toUnmodifiableList());
+
+            long elapsed = (System.nanoTime() - startTime) / 1_000_000;
+            TutorialMod.LOGGER.debug("   └─ Found {} blocks in {}ms and cached", filtered.size(), elapsed);
+
+            return filtered;
+        });
+    }
 
     // ===== UTILITY METHODS =====
 
@@ -280,12 +603,23 @@ public class DatagenHelper {
      * Get material name from item/block name (e.g., "pink_garnet_sword" -> "pink_garnet")
      */
     public static String getMaterialName(String fullName) {
-        // Use central suffix list from configuration
-        for (String suffix : MaterialSuffixes.ALL_SUFFIXES) {
+        TutorialMod.LOGGER.trace("🔧 [MATERIAL PARSING] Extracting material name from: {}", fullName);
+
+        // Remove common suffixes
+        String[] suffixes = {"_sword", "_pickaxe", "_shovel", "_axe", "_hoe", "_hammer",
+                            "_helmet", "_chestplate", "_leggings", "_boots",
+                            "_block", "_ore", "_stairs", "_slab", "_wall", "_fence", "_door",
+                            "_trapdoor", "_button", "_pressure_plate"};
+
+        for (String suffix : suffixes) {
             if (fullName.endsWith(suffix)) {
-                return fullName.substring(0, fullName.length() - suffix.length());
+                String materialName = fullName.substring(0, fullName.length() - suffix.length());
+                TutorialMod.LOGGER.trace("   └─ Extracted material: {} (removed suffix: {})", materialName, suffix);
+                return materialName;
             }
         }
+
+        TutorialMod.LOGGER.trace("   └─ No suffix matched, returning original: {}", fullName);
         return fullName;
     }
 
@@ -293,363 +627,163 @@ public class DatagenHelper {
      * Find material item by name (e.g., "pink_garnet" -> ModItems.PINK_GARNET)
      */
     public static Item findMaterialItem(String materialName) {
-        return getAllItems().stream()
-            .filter(entry -> entry.name().equals(materialName))
+        TutorialMod.LOGGER.debug("🔍 [ITEM LOOKUP] Finding material item: {}", materialName);
+
+        Item foundItem = getAllItems().stream()
+            .filter(entry -> {
+                boolean matches = entry.name().equals(materialName);
+                if (matches) {
+                    TutorialMod.LOGGER.debug("   ✓ Found matching item: {}", entry.name());
+                }
+                return matches;
+            })
             .map(ItemEntry::item)
             .findFirst()
             .orElse(null);
+
+        if (foundItem == null) {
+            TutorialMod.LOGGER.warn("   ✗ Material item NOT found: {}", materialName);
+        }
+
+        return foundItem;
     }
 
     /**
      * Find material block by name
      */
     public static Block findMaterialBlock(String materialName) {
-        return getAllBlocks().stream()
-            .filter(entry -> entry.name().equals(materialName))
+        TutorialMod.LOGGER.debug("🔍 [BLOCK LOOKUP] Finding material block: {}", materialName);
+
+        Block foundBlock = getAllBlocks().stream()
+            .filter(entry -> {
+                boolean matches = entry.name().equals(materialName);
+                if (matches) {
+                    TutorialMod.LOGGER.debug("   ✓ Found matching block: {}", entry.name());
+                }
+                return matches;
+            })
             .map(BlockEntry::block)
             .findFirst()
             .orElse(null);
+
+        if (foundBlock == null) {
+            TutorialMod.LOGGER.warn("   ✗ Material block NOT found: {}", materialName);
+        }
+
+        return foundBlock;
     }
 
     /**
-     * Check if item is a specific type using configuration
+     * Check if item is a tool/armor that should have recipes
      */
     public static boolean isCraftable(String name) {
-        return isTool(name) || isArmor(name);
+        boolean result = name.contains("sword") || name.contains("pickaxe") || name.contains("shovel") ||
+               name.contains("axe") || name.contains("hoe") || name.contains("hammer") ||
+               name.contains("helmet") || name.contains("chestplate") ||
+               name.contains("leggings") || name.contains("boots");
+
+        TutorialMod.LOGGER.trace("   ├─ Checking if craftable: {} -> {}", name, result);
+        return result;
     }
 
     /**
      * Check if item is a tool
      */
     public static boolean isTool(String name) {
-        return containsAny(name, "sword", "pickaxe", "shovel", "axe", "hoe", "hammer");
+        boolean result = name.contains("sword") || name.contains("pickaxe") || name.contains("shovel") ||
+               name.contains("axe") || name.contains("hoe") || name.contains("hammer");
+
+        TutorialMod.LOGGER.trace("   ├─ Checking if tool: {} -> {}", name, result);
+        return result;
     }
 
     /**
      * Check if item is armor
      */
     public static boolean isArmor(String name) {
-        return containsAny(name, "helmet", "chestplate", "legging", "boots");
+        boolean result = name.contains("helmet") || name.contains("chestplate") ||
+               name.contains("leggings") || name.contains("boots");
+
+        TutorialMod.LOGGER.trace("   ├─ Checking if armor: {} -> {}", name, result);
+        return result;
     }
 
     /**
      * Get count of discovered items
      */
     public static int getItemCount() {
-        return getAllItems().size();
+        int count = getAllItems().size();
+        TutorialMod.LOGGER.debug("📊 [ITEM COUNT] Total items discovered: {}", count);
+        return count;
     }
 
     /**
      * Get count of discovered blocks
      */
     public static int getBlockCount() {
-        return getAllBlocks().size();
+        int count = getAllBlocks().size();
+        TutorialMod.LOGGER.debug("📊 [BLOCK COUNT] Total blocks discovered: {}", count);
+        return count;
     }
 
     /**
      * Clear all caches (useful for testing)
      */
     public static void clearCaches() {
+        TutorialMod.LOGGER.info("🧹 [CACHE CLEAR] Starting cache clearing operation");
+        int itemCacheBefore = itemCategoryCache.size();
+        int blockCacheBefore = blockCategoryCache.size();
+
+        TutorialMod.LOGGER.debug("   ├─ Item category caches before: {}", itemCacheBefore);
+        TutorialMod.LOGGER.debug("   ├─ Block category caches before: {}", blockCacheBefore);
+
         itemCategoryCache.clear();
         blockCategoryCache.clear();
         cachedItems = null;
         cachedBlocks = null;
+
+        TutorialMod.LOGGER.debug("   ├─ Cleared {} item category caches", itemCacheBefore);
+        TutorialMod.LOGGER.debug("   ├─ Cleared {} block category caches", blockCacheBefore);
+        TutorialMod.LOGGER.debug("   ├─ Primary item cache: CLEARED");
+        TutorialMod.LOGGER.debug("   └─ Primary block cache: CLEARED");
+        TutorialMod.LOGGER.info("✅ [CACHE CLEAR COMPLETE] All caches successfully cleared and reset");
     }
 
     /**
      * Get cache statistics
      */
     public static String getCacheStats() {
-        return String.format("Items: %d cached, %d in cache | Blocks: %d cached, %d in cache",
-            getAllItems().size(), itemCategoryCache.size(),
-            getAllBlocks().size(), blockCategoryCache.size());
+        int itemsInPrimary = cachedItems != null ? cachedItems.size() : 0;
+        int blocksInPrimary = cachedBlocks != null ? cachedBlocks.size() : 0;
+        int itemCategoryCaches = itemCategoryCache.size();
+        int blockCategoryCaches = blockCategoryCache.size();
+
+        String stats = String.format(
+            "Items: %d primary + %d category caches | Blocks: %d primary + %d category caches",
+            itemsInPrimary, itemCategoryCaches,
+            blocksInPrimary, blockCategoryCaches
+        );
+
+        TutorialMod.LOGGER.info("📊 [CACHE STATS]");
+        TutorialMod.LOGGER.info("   ├─ Primary Caches:");
+        TutorialMod.LOGGER.info("   │  ├─ Items: {} entries", itemsInPrimary);
+        TutorialMod.LOGGER.info("   │  └─ Blocks: {} entries", blocksInPrimary);
+        TutorialMod.LOGGER.info("   ├─ Category Caches:");
+        TutorialMod.LOGGER.info("   │  ├─ Item categories: {} cached", itemCategoryCaches);
+        TutorialMod.LOGGER.info("   │  └─ Block categories: {} cached", blockCategoryCaches);
+        TutorialMod.LOGGER.info("   └─ Total Memory: ~{} KB", (itemsInPrimary + blocksInPrimary + itemCategoryCaches + blockCategoryCaches) * 2);
+
+        return stats;
     }
 
     private static boolean containsAny(String text, String... keywords) {
         for (String keyword : keywords) {
             if (text.contains(keyword)) {
+                TutorialMod.LOGGER.trace("       └─ Contains keyword: {}", keyword);
                 return true;
             }
         }
         return false;
-    }
-
-    // ===== UNIFIED TAG CONFIGURATION =====
-    /**
-     * Centralized tag generation configuration
-     */
-    public static class TagConfig {
-        // Block tag keywords
-        public static final Map<String, List<String>> BLOCK_TAG_KEYWORDS = Map.ofEntries(
-            Map.entry("pickaxe_mineable", List.of("block", "ore", "lamp", "door", "trapdoor",
-                                                   "button", "pressure_plate", "fence", "wall",
-                                                   "stairs", "slab")),
-            Map.entry("axe_mineable", List.of("log", "wood", "planks", "driftwood")),
-            Map.entry("needs_iron_tool", List.of("deepslate")),
-            Map.entry("needs_diamond_tool", List.of("magic")),
-            Map.entry("fences", List.of("fence")),
-            Map.entry("walls", List.of("wall")),
-            Map.entry("logs", List.of("log", "wood")),
-            Map.entry("planks", List.of("planks"))
-        );
-
-        // Item tag keywords
-        public static final Map<String, List<String>> ITEM_TAG_KEYWORDS = Map.ofEntries(
-            Map.entry("swords", List.of("sword")),
-            Map.entry("pickaxes", List.of("pickaxe")),
-            Map.entry("axes", List.of("axe")),
-            Map.entry("shovels", List.of("shovel")),
-            Map.entry("hoes", List.of("hoe")),
-            Map.entry("tools", List.of("sword", "pickaxe", "shovel", "axe", "hoe", "hammer")),
-            Map.entry("helmets", List.of("helmet")),
-            Map.entry("chestplates", List.of("chestplate")),
-            Map.entry("leggings", List.of("leggings", "bottoms")),
-            Map.entry("boots", List.of("boots"))
-        );
-
-        // Tag exclusions
-        public static final Map<String, List<String>> TAG_EXCLUSIONS = Map.ofEntries(
-            Map.entry("pickaxe_mineable", List.of("driftwood", "leaves", "sapling")),
-            Map.entry("armor", List.of("pajama"))
-        );
-    }
-
-    /**
-     * Get tags for a specific block
-     */
-    public static List<String> getBlockTags(String blockName) {
-        return getTagsForName(blockName, TagConfig.BLOCK_TAG_KEYWORDS, TagConfig.TAG_EXCLUSIONS);
-    }
-
-    /**
-     * Get tags for a specific item
-     */
-    public static List<String> getItemTags(String itemName) {
-        return getTagsForName(itemName, TagConfig.ITEM_TAG_KEYWORDS, TagConfig.TAG_EXCLUSIONS);
-    }
-
-    /**
-     * Generic tag matching logic (no duplication)
-     */
-    private static List<String> getTagsForName(String name, Map<String, List<String>> tagKeywords, Map<String, List<String>> tagExclusions) {
-        List<String> tags = new ArrayList<>();
-
-        for (Map.Entry<String, List<String>> tagEntry : tagKeywords.entrySet()) {
-            String tagName = tagEntry.getKey();
-            List<String> keywords = tagEntry.getValue();
-            List<String> exclusions = tagExclusions.getOrDefault(tagName, List.of());
-
-            boolean hasKeyword = keywords.stream().anyMatch(k -> name.contains(k));
-            boolean hasExclusion = exclusions.stream().anyMatch(e -> name.contains(e));
-
-            if (hasKeyword && !hasExclusion) {
-                tags.add(tagName);
-            }
-        }
-
-        return tags;
-    }
-
-    // ===== UNIFIED DATAGEN CONFIGURATION =====
-
-    /**
-     * Central configuration for ALL datagen operations
-     * Consolidated from: ModRecipeProvider, ModBlockTagProvider, ModItemTagProvider, etc.
-     */
-    public static class DatagenConfig {
-        // Recipe patterns by tool type
-        public static final Map<String, String[]> TOOL_PATTERNS = Map.ofEntries(
-            Map.entry("sword", new String[]{"M", "M", "S"}),
-            Map.entry("pickaxe", new String[]{"MMM", "MS ", "MS "}),
-            Map.entry("hammer", new String[]{"MM ", "MS ", "MS "}),
-            Map.entry("shovel", new String[]{"M", "S", "S"}),
-            Map.entry("axe", new String[]{"MM ", "MS ", " S "}),
-            Map.entry("hoe", new String[]{"MM ", " S ", " S "})
-        );
-
-        // Armor patterns by type
-        public static final Map<String, String[]> ARMOR_PATTERNS = Map.ofEntries(
-            Map.entry("helmet", new String[]{"MMM", "M M"}),
-            Map.entry("chestplate", new String[]{"M M", "MMM", "MMM"}),
-            Map.entry("leggings", new String[]{"MMM", "M M", "M M"}),
-            Map.entry("boots", new String[]{"M M", "M M"})
-        );
-
-        // Smelting/blasting configurations
-        public static final float ORE_EXPERIENCE = 0.25f;
-        public static final int SMELTING_TIME = 200;
-        public static final int BLASTING_TIME = 100;
-
-        // Tool generation exclusions
-        public static final Map<String, String> TOOL_EXCLUSIONS = Map.ofEntries(
-            Map.entry("sword", "obsidian"),
-            Map.entry("axe", "obsidian")
-        );
-    }
-
-    /**
-     * Get tool recipe pattern by type
-     */
-    public static String[] getToolPattern(String toolType) {
-        return DatagenConfig.TOOL_PATTERNS.getOrDefault(toolType, new String[]{});
-    }
-
-    /**
-     * Get armor recipe pattern by type
-     */
-    public static String[] getArmorPattern(String armorType) {
-        return DatagenConfig.ARMOR_PATTERNS.getOrDefault(armorType, new String[]{});
-    }
-
-    /**
-     * Get exclusion pattern for tool type
-     */
-    public static String getToolExclusion(String toolType) {
-        return DatagenConfig.TOOL_EXCLUSIONS.get(toolType);
-    }
-
-    // ===== UNIFIED LOOT TABLE CONFIGURATION =====
-    /**
-     * Centralized loot table configuration
-     * Consolidated from: ModLootTableProvider
-     */
-    public static class LootTableConfig {
-        // Loot table type by block keywords
-        public static final Map<String, String> LOOT_TABLE_TYPES = Map.ofEntries(
-            Map.entry("ore", "drop_self"),
-            Map.entry("block", "drop_self"),
-            Map.entry("door", "single_block"),
-            Map.entry("trapdoor", "single_block"),
-            Map.entry("button", "drop_self"),
-            Map.entry("pressure_plate", "drop_self"),
-            Map.entry("fence", "drop_self"),
-            Map.entry("gate", "drop_self"),
-            Map.entry("wall", "drop_self"),
-            Map.entry("stairs", "drop_self"),
-            Map.entry("slab", "double_block")
-        );
-
-        // Experience drop rates
-        public static final Map<String, Float> EXPERIENCE_RATES = Map.ofEntries(
-            Map.entry("ore", 0.25f),
-            Map.entry("deepslate", 0.25f),
-            Map.entry("block", 0.1f)
-        );
-
-        // Silk touch requirements
-        public static final List<String> SILK_TOUCH_BLOCKS = List.of(
-            "leaves", "sapling", "ice", "glass"
-        );
-    }
-
-    /**
-     * Get loot table type for a block
-     */
-    public static String getLootTableType(String blockName) {
-        for (Map.Entry<String, String> entry : LootTableConfig.LOOT_TABLE_TYPES.entrySet()) {
-            if (blockName.contains(entry.getKey())) {
-                return entry.getValue();
-            }
-        }
-        return "drop_self";
-    }
-
-    /**
-     * Get experience drop rate for a block
-     */
-    public static float getExperienceRate(String blockName) {
-        for (Map.Entry<String, Float> entry : LootTableConfig.EXPERIENCE_RATES.entrySet()) {
-            if (blockName.contains(entry.getKey())) {
-                return entry.getValue();
-            }
-        }
-        return 0.0f;
-    }
-
-    /**
-     * Check if block requires silk touch
-     */
-    public static boolean requiresSilkTouch(String blockName) {
-        return LootTableConfig.SILK_TOUCH_BLOCKS.stream()
-            .anyMatch(blockName::contains);
-    }
-
-    // ===== UNIFIED MODEL CONFIGURATION =====
-    /**
-     * Centralized model generation configuration
-     * Consolidated from: ModModelProvider
-     */
-    public static class ModelConfig {
-        // Model type by item/block keywords
-        public static final Map<String, String> MODEL_TYPES = Map.ofEntries(
-            Map.entry("sword", "handheld"),
-            Map.entry("pickaxe", "handheld"),
-            Map.entry("shovel", "handheld"),
-            Map.entry("axe", "handheld"),
-            Map.entry("hoe", "handheld"),
-            Map.entry("hammer", "handheld"),
-            Map.entry("ore", "cube_all"),
-            Map.entry("block", "cube_all"),
-            Map.entry("lamp", "cube_all"),
-            Map.entry("door", "door_bottom"),
-            Map.entry("fence", "fence_side"),
-            Map.entry("wall", "wall_side"),
-            Map.entry("stairs", "stairs"),
-            Map.entry("slab", "slab"),
-            Map.entry("button", "button"),
-            Map.entry("pressure_plate", "pressure_plate")
-        );
-
-        // Parent model for different types
-        public static final Map<String, String> PARENT_MODELS = Map.ofEntries(
-            Map.entry("handheld", "item/handheld"),
-            Map.entry("cube_all", "block/cube_all"),
-            Map.entry("door_bottom", "block/door_bottom"),
-            Map.entry("fence_side", "block/fence_side"),
-            Map.entry("wall_side", "block/wall_side"),
-            Map.entry("stairs", "block/stairs"),
-            Map.entry("slab", "block/slab"),
-            Map.entry("button", "block/button"),
-            Map.entry("pressure_plate", "block/pressure_plate")
-        );
-    }
-
-    /**
-     * Get model type for an item/block
-     */
-    public static String getModelType(String name) {
-        for (Map.Entry<String, String> entry : ModelConfig.MODEL_TYPES.entrySet()) {
-            if (name.contains(entry.getKey())) {
-                return entry.getValue();
-            }
-        }
-        return "cube_all";
-    }
-
-    /**
-     * Get parent model for a type
-     */
-    public static String getParentModel(String modelType) {
-        return ModelConfig.PARENT_MODELS.getOrDefault(modelType, "item/generated");
-    }
-
-    // ===== UNIFIED CUSTOM ITEM TAG CONFIGURATION =====
-    /**
-     * Additional item tag configuration
-     * Consolidated from: ModItemTagProvider
-     */
-    public static class ItemTagConfig {
-        public static final Map<String, List<String>> CUSTOM_ITEM_TAGS = Map.ofEntries(
-            Map.entry("transformable_items", List.of("pink_garnet", "stick")),
-            Map.entry("repair_materials", List.of("pink_garnet"))
-        );
-    }
-
-    /**
-     * Get custom item tags
-     */
-    public static Map<String, List<String>> getCustomItemTags() {
-        return ItemTagConfig.CUSTOM_ITEM_TAGS;
     }
 
     /**
@@ -657,7 +791,11 @@ public class DatagenHelper {
      */
     public record ItemEntry(String name, Item item) {
         public boolean nameContains(String keyword) {
-            return name.contains(keyword.toLowerCase());
+            boolean result = name.contains(keyword.toLowerCase());
+            if (result) {
+                TutorialMod.LOGGER.trace("     ✓ ItemEntry match: {} contains {}", name, keyword);
+            }
+            return result;
         }
     }
 
@@ -666,463 +804,17 @@ public class DatagenHelper {
      */
     public record BlockEntry(String name, Block block) {
         public boolean nameContains(String keyword) {
-            return name.contains(keyword.toLowerCase());
+            boolean result = name.contains(keyword.toLowerCase());
+            if (result) {
+                TutorialMod.LOGGER.trace("     ✓ BlockEntry match: {} contains {}", name, keyword);
+            }
+            return result;
         }
 
         public Item asItem() {
-            return block.asItem();
+            Item result = block.asItem();
+            TutorialMod.LOGGER.trace("       └─ Converted block to item: {}", result);
+            return result;
         }
-    }
-
-    // ===== UNIFIED BLOCK TAG PROVIDER CONFIGURATION =====
-    /**
-     * Centralized block tag generation configuration
-     * Consolidated from: ModBlockTagProvider
-     */
-    public static class BlockTagProviderConfig {
-        // Define all block tags and their associated keywords
-        public static final Map<String, BlockTagDefinition> BLOCK_TAG_DEFINITIONS = Map.ofEntries(
-            // Tool mineable tags
-            Map.entry("pickaxe_mineable", new BlockTagDefinition(
-                List.of("ore", "block", "lamp", "door", "trapdoor", "button", "pressure_plate", "fence", "wall", "stairs", "slab"),
-                List.of("driftwood", "leaves", "sapling")
-            )),
-            Map.entry("axe_mineable", new BlockTagDefinition(
-                List.of("log", "wood", "planks", "driftwood"),
-                List.of()
-            )),
-            Map.entry("shovel_mineable", new BlockTagDefinition(
-                List.of("dirt", "grass", "sand", "gravel"),
-                List.of()
-            )),
-
-            // Tool requirement tags
-            Map.entry("needs_iron_tool", new BlockTagDefinition(
-                List.of("deepslate"),
-                List.of()
-            )),
-            Map.entry("needs_diamond_tool", new BlockTagDefinition(
-                List.of("magic", "obsidian"),
-                List.of()
-            )),
-
-            // Block structure tags
-            Map.entry("fences", new BlockTagDefinition(
-                List.of("fence"),
-                List.of("gate")
-            )),
-            Map.entry("fence_gates", new BlockTagDefinition(
-                List.of("fence_gate"),
-                List.of()
-            )),
-            Map.entry("walls", new BlockTagDefinition(
-                List.of("wall"),
-                List.of()
-            )),
-            Map.entry("doors", new BlockTagDefinition(
-                List.of("door"),
-                List.of()
-            )),
-            Map.entry("trapdoors", new BlockTagDefinition(
-                List.of("trapdoor"),
-                List.of()
-            )),
-            Map.entry("stairs", new BlockTagDefinition(
-                List.of("stairs"),
-                List.of()
-            )),
-            Map.entry("slabs", new BlockTagDefinition(
-                List.of("slab"),
-                List.of()
-            )),
-
-            // Plant tags
-            Map.entry("logs_that_burn", new BlockTagDefinition(
-                List.of("log", "wood"),
-                List.of()
-            )),
-            Map.entry("planks", new BlockTagDefinition(
-                List.of("planks"),
-                List.of()
-            ))
-        );
-
-        /**
-         * Block tag definition with inclusions and exclusions
-         */
-        public static class BlockTagDefinition {
-            public final List<String> inclusions;
-            public final List<String> exclusions;
-
-            public BlockTagDefinition(List<String> inclusions, List<String> exclusions) {
-                this.inclusions = inclusions;
-                this.exclusions = exclusions;
-            }
-        }
-    }
-
-    /**
-     * Get blocks matching a specific tag definition
-     */
-    public static List<BlockEntry> getBlocksForTag(String tagName) {
-        BlockTagProviderConfig.BlockTagDefinition def = BlockTagProviderConfig.BLOCK_TAG_DEFINITIONS.get(tagName);
-        if (def == null) return List.of();
-
-        return getAllBlocks().stream()
-            .filter(entry -> {
-                // Check if block matches any inclusion keyword
-                boolean hasInclusion = def.inclusions.stream()
-                    .anyMatch(keyword -> entry.name().contains(keyword));
-
-                // Check if block matches any exclusion keyword
-                boolean hasExclusion = def.exclusions.stream()
-                    .anyMatch(keyword -> entry.name().contains(keyword));
-
-                return hasInclusion && !hasExclusion;
-            })
-            .collect(Collectors.toList());
-    }
-
-    /**
-     * Get all applicable tags for a specific block
-     */
-    public static List<String> getApplicableBlockTags(String blockName) {
-        List<String> applicableTags = new ArrayList<>();
-
-        for (Map.Entry<String, BlockTagProviderConfig.BlockTagDefinition> entry :
-                BlockTagProviderConfig.BLOCK_TAG_DEFINITIONS.entrySet()) {
-            String tagName = entry.getKey();
-            BlockTagProviderConfig.BlockTagDefinition def = entry.getValue();
-
-            // Check if block matches inclusions but not exclusions
-            boolean hasInclusion = def.inclusions.stream()
-                .anyMatch(keyword -> blockName.contains(keyword));
-            boolean hasExclusion = def.exclusions.stream()
-                .anyMatch(keyword -> blockName.contains(keyword));
-
-            if (hasInclusion && !hasExclusion) {
-                applicableTags.add(tagName);
-            }
-        }
-
-        return applicableTags;
-    }
-
-    /**
-     * Convenience methods for common block tags
-     */
-    public static List<BlockEntry> getPickaxeMineableBlocks() {
-        return getBlocksForTag("pickaxe_mineable");
-    }
-
-    public static List<BlockEntry> getAxeMineableBlocks() {
-        return getBlocksForTag("axe_mineable");
-    }
-
-    public static List<BlockEntry> getShovelMineableBlocks() {
-        return getBlocksForTag("shovel_mineable");
-    }
-
-    public static List<BlockEntry> getNeedsIronToolBlocks() {
-        return getBlocksForTag("needs_iron_tool");
-    }
-
-    public static List<BlockEntry> getNeedsDiamondToolBlocks() {
-        return getBlocksForTag("needs_diamond_tool");
-    }
-
-    public static List<BlockEntry> getFenceBlocks() {
-        return getBlocksForTag("fences");
-    }
-
-    public static List<BlockEntry> getFenceGateBlocks() {
-        return getBlocksForTag("fence_gates");
-    }
-
-    public static List<BlockEntry> getWallBlocks() {
-        return getBlocksForTag("walls");
-    }
-
-    public static List<BlockEntry> getDoorBlocks() {
-        return getBlocksForTag("doors");
-    }
-
-    public static List<BlockEntry> getTrapdoorBlocks() {
-        return getBlocksForTag("trapdoors");
-    }
-
-    public static List<BlockEntry> getStairBlocks() {
-        return getBlocksForTag("stairs");
-    }
-
-    public static List<BlockEntry> getSlabBlocks() {
-        return getBlocksForTag("slabs");
-    }
-
-    public static List<BlockEntry> getLogBlocks() {
-        return getBlocksForTag("logs_that_burn");
-    }
-
-    public static List<BlockEntry> getPlankBlocks() {
-        return getBlocksForTag("planks");
-    }
-
-    // ===== UNIFIED ITEM TAG PROVIDER CONFIGURATION =====
-    /**
-     * Centralized item tag generation configuration
-     * Consolidated from: ModItemTagProvider
-     */
-    public static class ItemTagProviderConfig {
-        // Item tag definitions with inclusions and exclusions
-        public static final Map<String, ItemTagDefinition> ITEM_TAG_DEFINITIONS = Map.ofEntries(
-            // Weapon tags
-            Map.entry("swords", new ItemTagDefinition(
-                List.of("sword"),
-                List.of()
-            )),
-            Map.entry("pickaxes", new ItemTagDefinition(
-                List.of("pickaxe"),
-                List.of("hammer")
-            )),
-            Map.entry("axes", new ItemTagDefinition(
-                List.of("axe"),
-                List.of()
-            )),
-            Map.entry("shovels", new ItemTagDefinition(
-                List.of("shovel"),
-                List.of()
-            )),
-            Map.entry("hoes", new ItemTagDefinition(
-                List.of("hoe"),
-                List.of()
-            )),
-
-            // Armor tags
-            Map.entry("helmets", new ItemTagDefinition(
-                List.of("helmet"),
-                List.of()
-            )),
-            Map.entry("chestplates", new ItemTagDefinition(
-                List.of("chestplate"),
-                List.of("pajama")
-            )),
-            Map.entry("leggings", new ItemTagDefinition(
-                List.of("legging", "bottoms"),
-                List.of("pajama")
-            )),
-            Map.entry("boots", new ItemTagDefinition(
-                List.of("boots"),
-                List.of()
-            )),
-
-            // Trimmable armor (excludes non-trimmable)
-            Map.entry("trimmable_armor", new ItemTagDefinition(
-                List.of("helmet", "chestplate", "legging", "boots"),
-                List.of("pajama")
-            )),
-
-            // Custom transformable items
-            Map.entry("transformable_items", new ItemTagDefinition(
-                List.of("pink_garnet", "stick"),
-                List.of()
-            ))
-        );
-
-        /**
-         * Item tag definition with inclusions and exclusions
-         */
-        public static class ItemTagDefinition {
-            public final List<String> inclusions;
-            public final List<String> exclusions;
-
-            public ItemTagDefinition(List<String> inclusions, List<String> exclusions) {
-                this.inclusions = inclusions;
-                this.exclusions = exclusions;
-            }
-        }
-    }
-
-    /**
-     * Get items matching a specific item tag definition
-     */
-    public static List<ItemEntry> getItemsForTag(String tagName) {
-        ItemTagProviderConfig.ItemTagDefinition def = ItemTagProviderConfig.ITEM_TAG_DEFINITIONS.get(tagName);
-        if (def == null) return List.of();
-
-        return getAllItems().stream()
-            .filter(entry -> {
-                boolean hasInclusion = def.inclusions.stream()
-                    .anyMatch(keyword -> entry.name().contains(keyword));
-                boolean hasExclusion = def.exclusions.stream()
-                    .anyMatch(keyword -> entry.name().contains(keyword));
-                return hasInclusion && !hasExclusion;
-            })
-            .collect(Collectors.toList());
-    }
-
-    /**
-     * Get all applicable item tags for a specific item
-     */
-    public static List<String> getApplicableItemTags(String itemName) {
-        List<String> applicableTags = new ArrayList<>();
-
-        for (Map.Entry<String, ItemTagProviderConfig.ItemTagDefinition> entry :
-                ItemTagProviderConfig.ITEM_TAG_DEFINITIONS.entrySet()) {
-            String tagName = entry.getKey();
-            ItemTagProviderConfig.ItemTagDefinition def = entry.getValue();
-
-            boolean hasInclusion = def.inclusions.stream()
-                .anyMatch(keyword -> itemName.contains(keyword));
-            boolean hasExclusion = def.exclusions.stream()
-                .anyMatch(keyword -> itemName.contains(keyword));
-
-            if (hasInclusion && !hasExclusion) {
-                applicableTags.add(tagName);
-            }
-        }
-
-        return applicableTags;
-    }
-
-    /**
-     * Convenience methods for common item tags
-     */
-    public static List<ItemEntry> getSwordItems() {
-        return getItemsForTag("swords");
-    }
-
-    public static List<ItemEntry> getPickaxeItems() {
-        return getItemsForTag("pickaxes");
-    }
-
-    public static List<ItemEntry> getAxeItems() {
-        return getItemsForTag("axes");
-    }
-
-    public static List<ItemEntry> getShovelItems() {
-        return getItemsForTag("shovels");
-    }
-
-    public static List<ItemEntry> getHoeItems() {
-        return getItemsForTag("hoes");
-    }
-
-    public static List<ItemEntry> getHelmetItems() {
-        return getItemsForTag("helmets");
-    }
-
-    public static List<ItemEntry> getChestplateItems() {
-        return getItemsForTag("chestplates");
-    }
-
-    public static List<ItemEntry> getLeggingItems() {
-        return getItemsForTag("leggings");
-    }
-
-    public static List<ItemEntry> getBootItems() {
-        return getItemsForTag("boots");
-    }
-
-    public static List<ItemEntry> getTrimmableArmorItems() {
-        return getItemsForTag("trimmable_armor");
-    }
-
-    public static List<ItemEntry> getTransformableItems() {
-        return getItemsForTag("transformable_items");
-    }
-
-    // ===== UNIFIED LOOT TABLE PROVIDER CONFIGURATION =====
-    /**
-     * Centralized loot table generation configuration
-     * Consolidated from: ModLootTableProvider
-     */
-    public static class LootTableProviderConfig {
-        // Block loot table drop configurations
-        public static final Map<String, BlockLootTableDefinition> BLOCK_LOOT_TABLE_DEFINITIONS = Map.ofEntries(
-            // Basic drop_self (block drops itself)
-            Map.entry("ore", new BlockLootTableDefinition("drop_self", 0.25f, false)),
-            Map.entry("block", new BlockLootTableDefinition("drop_self", 0.1f, false)),
-            Map.entry("button", new BlockLootTableDefinition("drop_self", 0.0f, false)),
-            Map.entry("pressure_plate", new BlockLootTableDefinition("drop_self", 0.0f, false)),
-            Map.entry("fence", new BlockLootTableDefinition("drop_self", 0.0f, false)),
-            Map.entry("wall", new BlockLootTableDefinition("drop_self", 0.0f, false)),
-            Map.entry("stairs", new BlockLootTableDefinition("drop_self", 0.0f, false)),
-
-            // Special handling for doors and trapdoors (only bottom half drops)
-            Map.entry("door", new BlockLootTableDefinition("door_bottom", 0.0f, false)),
-            Map.entry("trapdoor", new BlockLootTableDefinition("trapdoor", 0.0f, false)),
-
-            // Double blocks (slabs drop 2x)
-            Map.entry("slab", new BlockLootTableDefinition("slab", 0.0f, false)),
-
-            // Leaves and plants (require silk touch or drop nothing)
-            Map.entry("leaves", new BlockLootTableDefinition("leaves", 0.0f, true)),
-            Map.entry("sapling", new BlockLootTableDefinition("drop_self", 0.0f, true))
-        );
-
-        /**
-         * Block loot table definition
-         */
-        public static class BlockLootTableDefinition {
-            public final String lootTableType;
-            public final float experience;
-            public final boolean requiresSilkTouch;
-
-            public BlockLootTableDefinition(String lootTableType, float experience, boolean requiresSilkTouch) {
-                this.lootTableType = lootTableType;
-                this.experience = experience;
-                this.requiresSilkTouch = requiresSilkTouch;
-            }
-        }
-    }
-
-    /**
-     * Get loot table definition for a block
-     */
-    public static LootTableProviderConfig.BlockLootTableDefinition getBlockLootTableDefinition(String blockName) {
-        for (Map.Entry<String, LootTableProviderConfig.BlockLootTableDefinition> entry :
-                LootTableProviderConfig.BLOCK_LOOT_TABLE_DEFINITIONS.entrySet()) {
-            if (blockName.contains(entry.getKey())) {
-                return entry.getValue();
-            }
-        }
-        // Default to drop_self
-        return new LootTableProviderConfig.BlockLootTableDefinition("drop_self", 0.0f, false);
-    }
-
-    /**
-     * Get loot table type for a block
-     */
-    public static String getBlockLootTableType(String blockName) {
-        return getBlockLootTableDefinition(blockName).lootTableType;
-    }
-
-    /**
-     * Get experience reward for a block
-     */
-    public static float getBlockExperience(String blockName) {
-        return getBlockLootTableDefinition(blockName).experience;
-    }
-
-    /**
-     * Check if block requires silk touch for loot
-     */
-    public static boolean blockRequiresSilkTouch(String blockName) {
-        return getBlockLootTableDefinition(blockName).requiresSilkTouch;
-    }
-
-    /**
-     * Get blocks that need loot table generation
-     */
-    public static List<BlockEntry> getLootTableBlocks() {
-        return getAllBlocks().stream()
-            .filter(entry -> {
-                String name = entry.name();
-                return name.contains("ore") || name.contains("block") || name.contains("door") ||
-                       name.contains("trapdoor") || name.contains("fence") || name.contains("wall") ||
-                       name.contains("stairs") || name.contains("slab") || name.contains("button") ||
-                       name.contains("pressure_plate") || name.contains("leaves");
-            })
-            .collect(Collectors.toList());
     }
 }

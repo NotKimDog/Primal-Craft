@@ -1,6 +1,7 @@
 package net.kaupenjoe.tutorialmod.util;
 
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.kaupenjoe.tutorialmod.TutorialMod;
 import net.kaupenjoe.tutorialmod.network.WeatherNotificationPayload;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.sound.SoundCategory;
@@ -16,7 +17,8 @@ import java.util.UUID;
 public class WeatherNotificationSystem {
     private static final Map<UUID, String> lastWeatherState = new HashMap<>();
     private static final Map<UUID, Long> lastNotificationTime = new HashMap<>();
-    private static final long NOTIFICATION_COOLDOWN = 600000; // 10 minutes between notifications
+    private static final long NOTIFICATION_COOLDOWN = 600000;
+    private static int notificationsSent = 0;
 
     /**
      * Check and notify player of weather changes
@@ -32,12 +34,19 @@ public class WeatherNotificationSystem {
         // Check if state changed
         String lastState = lastWeatherState.get(playerId);
         if (lastState == null || !lastState.equals(currentState)) {
+            TutorialMod.LOGGER.debug("🌦️  [WEATHER] {} weather changed: {} → {}",
+                player.getName().getString(), lastState != null ? lastState : "INITIAL", currentState);
+
             // Check cooldown
             Long lastTime = lastNotificationTime.get(playerId);
             if (lastTime == null || (currentTime - lastTime) > NOTIFICATION_COOLDOWN) {
                 // Send notification
                 sendWeatherNotification(player, weather);
                 lastNotificationTime.put(playerId, currentTime);
+            } else {
+                long cooldownRemaining = NOTIFICATION_COOLDOWN - (currentTime - lastTime);
+                TutorialMod.LOGGER.trace("   └─ Notification on cooldown ({} seconds remaining)",
+                    cooldownRemaining / 1000);
             }
             lastWeatherState.put(playerId, currentState);
         }
@@ -47,7 +56,15 @@ public class WeatherNotificationSystem {
      * Send weather notification to player
      */
     private static void sendWeatherNotification(ServerPlayerEntity player, TemperatureSystem.WeatherInfo weather) {
-        // Build notification message first
+        notificationsSent++;
+
+        TutorialMod.LOGGER.debug("📢 [WEATHER_NOTIFY] Event #{} - {} weather: {}",
+            notificationsSent, player.getName().getString(), weather.state);
+        TutorialMod.LOGGER.trace("   ├─ Message: {}", weather.alert);
+        TutorialMod.LOGGER.trace("   ├─ Wind Chill: {}°C", String.format("%.1f", weather.windChill));
+        TutorialMod.LOGGER.trace("   ├─ Biome Temp: {}°C", String.format("%.1f", weather.effectiveTemp));
+
+        // Build notification message
         String message = weather.alert;
         if (weather.windChill < -2.0) {
             message += "|Wind: " + String.format("%.1f", weather.windChill) + "°C";
@@ -55,26 +72,32 @@ public class WeatherNotificationSystem {
 
         // Send to client for animated display
         int color = getWeatherNotificationColor(weather.state);
+        TutorialMod.LOGGER.trace("   ├─ Color: #" + Integer.toHexString(color));
         ServerPlayNetworking.send(player, new WeatherNotificationPayload(message, color));
 
         // Play appropriate sound based on weather state
+        String soundType = "NONE";
         switch (weather.state) {
             case "Clear":
+                soundType = "CLEAR_WEATHER";
                 player.playSound(net.kaupenjoe.tutorialmod.sound.ModSounds.CLEAR_WEATHER, 0.7f, 1.0f);
                 break;
             case "Rain":
             case "Snow":
             case "Thunderstorm":
             case "Snowstorm":
+                soundType = "RAIN_WEATHER";
                 player.playSound(net.kaupenjoe.tutorialmod.sound.ModSounds.RAIN_WEATHER, 0.7f, 1.0f);
                 break;
             case "Blizzard":
             case "Heatwave":
             case "Hard Freeze":
             default:
+                soundType = "THUNDER_WEATHER";
                 player.playSound(net.kaupenjoe.tutorialmod.sound.ModSounds.THUNDER_WEATHER, 0.6f, 1.0f);
                 break;
         }
+        TutorialMod.LOGGER.trace("   └─ Sound: {}", soundType);
     }
 
     /**

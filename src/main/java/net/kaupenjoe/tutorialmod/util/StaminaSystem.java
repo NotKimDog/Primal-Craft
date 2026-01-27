@@ -22,20 +22,38 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class StaminaSystem {
     private static final double MAX_STAMINA = 100.0;
-    private static final double REGEN_PER_TICK = 1.0; // Increased from 0.2 - ~20/sec instead of 4/sec
+    private static final double REGEN_PER_TICK = 1.0;
     private static final Map<UUID, Double> STAMINA = new ConcurrentHashMap<>();
     private static final Identifier STAMINA_SYNC_ID = Identifier.of(TutorialMod.MOD_ID, "stamina_sync");
     private static int tickCounter = 0;
+    private static int consumptionEvents = 0;
+    private static int syncEvents = 0;
 
     private StaminaSystem() {}
 
     public static void register() {
+        TutorialMod.LOGGER.info("⚙️  [STAMINA_SYSTEM] Initializing StaminaSystem");
+        TutorialMod.LOGGER.debug("   ├─ Max Stamina: {}", MAX_STAMINA);
+        TutorialMod.LOGGER.debug("   ├─ Regen Per Tick: {}", REGEN_PER_TICK);
+        TutorialMod.LOGGER.debug("   └─ Registering event listeners...");
+
         ServerTickEvents.END_SERVER_TICK.register(StaminaSystem::tick);
-        ServerLifecycleEvents.SERVER_STOPPING.register(server -> STAMINA.clear());
+        ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
+            TutorialMod.LOGGER.info("🧹 [STAMINA_SYSTEM] Server stopping - clearing all stamina data ({} players)", STAMINA.size());
+            STAMINA.clear();
+        });
+
+        TutorialMod.LOGGER.info("✅ [STAMINA_SYSTEM] StaminaSystem registered successfully");
     }
 
     private static void tick(MinecraftServer server) {
         tickCounter++;
+        int playerCount = server.getPlayerManager().getPlayerList().size();
+
+        if (tickCounter % 100 == 0) {
+            TutorialMod.LOGGER.trace("📍 [STAMINA_TICK] Tick #{} - Processing {} players", tickCounter, playerCount);
+        }
+
         for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
             UUID id = player.getUuid();
             double value = STAMINA.getOrDefault(id, MAX_STAMINA);
@@ -45,36 +63,37 @@ public final class StaminaSystem {
 
             // Calculate regen multipliers from all sources
             double regenMultiplier = 1.0;
-            regenMultiplier *= StaminaPotionEffects.getRegenMultiplier(player);
-            regenMultiplier *= TemperatureSystem.getTemperatureRegenMultiplier(temperature);
-            // regenMultiplier *= EnvironmentalStaminaEffects.getEnvironmentRegenMultiplier(player);
-            // regenMultiplier *= ArmorWeightSystem.getArmorRegenMultiplier(player);
+            double potionMult = StaminaPotionEffects.getRegenMultiplier(player);
+            double tempMult = TemperatureSystem.getTemperatureRegenMultiplier(temperature);
 
-            // Check for pet bonus
-            // if (MountStaminaHandler.hasPetNearby(player)) {
-            //     regenMultiplier += 0.3;
-            // }
+            regenMultiplier *= potionMult;
+            regenMultiplier *= tempMult;
 
-            double next = Math.min(MAX_STAMINA, value + (REGEN_PER_TICK * regenMultiplier));
+            if (tickCounter % 100 == 0) {
+                TutorialMod.LOGGER.trace("   ├─ [REGEN] {}: Potion: {}, Temp: {} ({}°C)",
+                    player.getName().getString(), String.format("%.2f", potionMult),
+                    String.format("%.2f", tempMult), String.format("%.1f", temperature));
+            }
+
+            double regenAmount = REGEN_PER_TICK * regenMultiplier;
+            double next = Math.min(MAX_STAMINA, value + regenAmount);
             STAMINA.put(id, next);
 
-            // Check for adrenaline rush
-            // if (AdrenalineRushSystem.shouldTriggerRush(player, value)) {
-            //     AdrenalineRushSystem.triggerAdrenalineRush(player);
-            //     // Restore 30 stamina
-            //     STAMINA.put(id, Math.min(MAX_STAMINA, value + 30.0));
-            // }
+            if (tickCounter % 100 == 0 && regenAmount > 0.01) {
+                TutorialMod.LOGGER.trace("   │  └─ Regenerated {}: {} → {} (+{})",
+                    player.getName().getString(), String.format("%.1f", value),
+                    String.format("%.1f", next), String.format("%.2f", regenAmount));
+            }
 
             // Sync to client every 5 ticks (~4 per second)
             if (tickCounter % 5 == 0) {
-                ServerPlayNetworking.send(player, new StaminaSyncPayload(
-                    STAMINA.get(id),
-                    MAX_STAMINA
-                ));
+                syncEvents++;
+                TutorialMod.LOGGER.trace("   ├─ [SYNC] Event #{}: Syncing stamina to {}: {}/{}",
+                    syncEvents, player.getName().getString(), String.format("%.1f", next), MAX_STAMINA);
 
-                // Sync temperature
+                ServerPlayNetworking.send(player, new StaminaSyncPayload(next, MAX_STAMINA));
                 ServerPlayNetworking.send(player, new net.kaupenjoe.tutorialmod.network.TemperatureSyncPayload(temperature));
-                // Sync world/biome temperature
+
                 double worldTemp = TemperatureSystem.getWorldTemperature(player);
                 ServerPlayNetworking.send(player, new net.kaupenjoe.tutorialmod.network.WorldTemperatureSyncPayload(worldTemp));
             }
@@ -85,15 +104,33 @@ public final class StaminaSystem {
     public static boolean tryConsume(ServerPlayerEntity player, double amount) {
         UUID id = player.getUuid();
         double current = STAMINA.getOrDefault(id, MAX_STAMINA);
+        consumptionEvents++;
+
+        TutorialMod.LOGGER.trace("💸 [CONSUME] Event #{}: {} attempting to consume {}",
+            consumptionEvents, player.getName().getString(), String.format("%.2f", amount));
+        TutorialMod.LOGGER.trace("   ├─ Current: {}, Required: {}",
+            String.format("%.1f", current), String.format("%.2f", amount));
+
         if (current < amount) {
+            TutorialMod.LOGGER.trace("   └─ ✗ FAILED - Insufficient stamina (deficit: {})",
+                String.format("%.2f", amount - current));
             return false;
         }
-        STAMINA.put(id, current - amount);
+
+        double newAmount = current - amount;
+        STAMINA.put(id, newAmount);
+
+        TutorialMod.LOGGER.trace("   └─ ✓ SUCCESS - {} → {}",
+            String.format("%.1f", current), String.format("%.1f", newAmount));
+
         return true;
     }
 
     public static double get(ServerPlayerEntity player) {
-        return STAMINA.getOrDefault(player.getUuid(), MAX_STAMINA);
+        double stamina = STAMINA.getOrDefault(player.getUuid(), MAX_STAMINA);
+        TutorialMod.LOGGER.trace("📊 [STAMINA_GET] {} stamina: {}/{}",
+            player.getName().getString(), String.format("%.1f", stamina), MAX_STAMINA);
+        return stamina;
     }
 
     public static double getMax() {

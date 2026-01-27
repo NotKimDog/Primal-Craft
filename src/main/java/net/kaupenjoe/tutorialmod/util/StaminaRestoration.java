@@ -1,6 +1,7 @@
 package net.kaupenjoe.tutorialmod.util;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.kaupenjoe.tutorialmod.TutorialMod;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
 
@@ -9,9 +10,11 @@ import net.minecraft.server.network.ServerPlayerEntity;
  */
 public final class StaminaRestoration {
     private static final java.util.Map<String, Double> STAMINA_FOODS = new java.util.HashMap<>();
+    private static int restEvents = 0;
+    private static int foodRestorations = 0;
 
     static {
-        // Food items that restore stamina and reduce fatigue
+        // ...existing food registrations...
         STAMINA_FOODS.put("enchanted_golden_apple", 50.0);
         STAMINA_FOODS.put("golden_apple", 25.0);
         STAMINA_FOODS.put("cooked_beef", 12.0);
@@ -27,12 +30,18 @@ public final class StaminaRestoration {
     }
 
     public static void register() {
+        TutorialMod.LOGGER.info("⚙️  [STAMINA_RESTORATION] Initializing StaminaRestoration");
+        TutorialMod.LOGGER.debug("   ├─ Registered food types: {}", STAMINA_FOODS.size());
+        TutorialMod.LOGGER.debug("   └─ Registering rest detection...");
+
         // Tick update for stamina restoration when resting
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
                 checkForRestAndRestore(player);
             }
         });
+
+        TutorialMod.LOGGER.info("✅ [STAMINA_RESTORATION] Rest detection registered");
     }
 
     /**
@@ -45,6 +54,13 @@ public final class StaminaRestoration {
 
             // Player is mostly still
             if (velocity < 0.001) {
+                restEvents++;
+                TutorialMod.LOGGER.trace("💤 [REST] Event #{} - {} is resting",
+                    restEvents, player.getName().getString());
+                TutorialMod.LOGGER.trace("   ├─ Food level: {}", player.getHungerManager().getFoodLevel());
+                TutorialMod.LOGGER.trace("   ├─ Velocity: {}", String.format("%.6f", velocity));
+                TutorialMod.LOGGER.trace("   └─ Restoring +0.3 stamina");
+
                 // Restore stamina and reduce fatigue when resting with food
                 EnhancedStaminaManager.restoreStamina(player, 0.3);
             }
@@ -58,9 +74,13 @@ public final class StaminaRestoration {
         String itemName = stack.getItem().getTranslationKey();
         for (String key : STAMINA_FOODS.keySet()) {
             if (itemName.contains(key)) {
-                return STAMINA_FOODS.get(key);
+                double restoration = STAMINA_FOODS.get(key);
+                TutorialMod.LOGGER.trace("🍽️  [FOOD_LOOKUP] {} restores {} stamina",
+                    itemName, String.format("%.1f", restoration));
+                return restoration;
             }
         }
+        TutorialMod.LOGGER.trace("🍽️  [FOOD_LOOKUP] {} not in stamina food database", itemName);
         return 0.0;
     }
 
@@ -70,7 +90,16 @@ public final class StaminaRestoration {
     public static void applyFoodRestoration(ServerPlayerEntity player, ItemStack food) {
         double restoration = getStaminaRestoration(food);
         if (restoration > 0) {
+            foodRestorations++;
+            TutorialMod.LOGGER.debug("🍽️  [FOOD_RESTORE] Event #{} - {} ate food",
+                foodRestorations, player.getName().getString());
+            TutorialMod.LOGGER.trace("   ├─ Food: {}", food.getItem().getName().getString());
+            TutorialMod.LOGGER.trace("   ├─ Restoration: {}", String.format("%.1f", restoration));
+            TutorialMod.LOGGER.trace("   └─ Applying stamina restoration");
+
             EnhancedStaminaManager.restoreStamina(player, restoration);
+        } else {
+            TutorialMod.LOGGER.trace("   └─ No stamina restoration for this food");
         }
     }
 }

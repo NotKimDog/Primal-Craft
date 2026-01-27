@@ -5,6 +5,8 @@ build/
 out/
 classes/
 Resource/
+cahche/
+logs/
 
 # eclipse
 

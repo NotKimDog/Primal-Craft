@@ -1,0 +1,29 @@
+{
+  "values": [
+    "tutorialmod:pink_garnet",
+    "tutorialmod:raw_pink_garnet",
+    "tutorialmod:pink_garnet_sword",
+    "tutorialmod:pink_garnet_pickaxe",
+    "tutorialmod:pink_garnet_shovel",
+    "tutorialmod:pink_garnet_axe",
+    "tutorialmod:pink_garnet_hoe",
+    "tutorialmod:pink_garnet_hammer",
+    "tutorialmod:pink_garnet_helmet",
+    "tutorialmod:pink_garnet_chestplate",
+    "tutorialmod:pink_garnet_leggings",
+    "tutorialmod:pink_garnet_boots",
+    "tutorialmod:pink_garnet_horse_armor",
+    "tutorialmod:acacia_stick",
+    "tutorialmod:birch_stick",
+    "tutorialmod:cherry_stick",
+    "tutorialmod:crimson_stick",
+    "tutorialmod:dark_oak_stick",
+    "tutorialmod:jungle_stick",
+    "tutorialmod:mangrove_stick",
+    "tutorialmod:pale_oak_stick",
+    "tutorialmod:spruce_stick",
+    "tutorialmod:warped_stick",
+    "minecraft:coal",
+    "minecraft:apple"
+  ]
+}

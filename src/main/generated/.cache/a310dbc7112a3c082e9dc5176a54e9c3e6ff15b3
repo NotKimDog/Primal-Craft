@@ -1,0 +1,10 @@
+// 1.21.11	-999999999-01-01T00:00:00	KimDog's SMP 1.21.X/Tags for minecraft:block
+8159fdbcb7619cbd57674525489b6dfed8a407fd data/minecraft/tags/block/fence_gates.json
+87c23b954c6a1061edf28d30d87d40ccfecb8a8f data/minecraft/tags/block/fences.json
+755e9019b6c82cf5a53bb6575d018d10f5c321db data/minecraft/tags/block/logs_that_burn.json
+7626aaba8de1d82e56d4e3850e6ae99f83eb1eb3 data/minecraft/tags/block/mineable/axe.json
+e1da9d7c0642b056b47a96bb001adfb9d045ba3b data/minecraft/tags/block/mineable/pickaxe.json
+f30a6367dbc22bbef01d6bf2a992f645005f83b5 data/minecraft/tags/block/needs_diamond_tool.json
+079e21ee82e19be3b06c0ad61d06e9bdce588108 data/minecraft/tags/block/needs_iron_tool.json
+6e20b69a9d2f5656b1009614747a8e826f937071 data/minecraft/tags/block/walls.json
+c07c4c3be2f1e2228e70cca883d68ce9bd7ba47e data/tutorialmod/tags/block/needs_pink_garnet_tool.json

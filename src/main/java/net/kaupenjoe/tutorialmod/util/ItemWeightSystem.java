@@ -1,5 +1,6 @@
 package net.kaupenjoe.tutorialmod.util;
 
+import net.kaupenjoe.tutorialmod.TutorialMod;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.registry.Registries;
@@ -12,6 +13,7 @@ import java.util.Map;
  * Heavier items = more stamina drain while carrying them.
  */
 public final class ItemWeightSystem {
+    // ...existing code...
     // Base weights for vanilla items (in stamina drain per tick per item)
     private static final Map<String, Double> ITEM_WEIGHTS = new HashMap<>();
 
@@ -252,17 +254,33 @@ public final class ItemWeightSystem {
      */
     public static double calculateInventoryWeightPenalty(net.minecraft.entity.player.PlayerEntity player) {
         double totalWeight = 0.0;
+        int itemCount = 0;
+
+        TutorialMod.LOGGER.trace("⚖️  [WEIGHT_CALC] Computing inventory weight for {}", player.getName().getString());
+        TutorialMod.LOGGER.trace("   ├─ Scanning {} inventory slots...", player.getInventory().size());
 
         // Check all inventory slots (0-35 main, 36-39 armor, 40 offhand)
         for (int i = 0; i < player.getInventory().size(); i++) {
             ItemStack stack = player.getInventory().getStack(i);
             if (!stack.isEmpty()) {
-                totalWeight += getItemWeight(stack) * stack.getCount();
+                double itemWeight = getItemWeight(stack);
+                double stackWeight = itemWeight * stack.getCount();
+                totalWeight += stackWeight;
+                itemCount++;
+
+                String itemName = Registries.ITEM.getId(stack.getItem()).getPath();
+                TutorialMod.LOGGER.trace("   │  ├─ Slot {}: {} x{} ({}): {}",
+                    i, itemName, stack.getCount(), String.format("%.2f", itemWeight),
+                    String.format("%.2f", stackWeight));
             }
         }
 
-        // Cap the weight penalty to prevent absurd values
-        return Math.min(totalWeight, 5.0);
+        double penalty = Math.min(totalWeight, 5.0);
+        TutorialMod.LOGGER.trace("   ├─ Total weight: {} (capped at 5.0)", String.format("%.2f", totalWeight));
+        TutorialMod.LOGGER.trace("   ├─ Items carried: {}", itemCount);
+        TutorialMod.LOGGER.trace("   └─ Final penalty: {} (~{}%)", String.format("%.2f", penalty), String.format("%.1f", penalty * 100));
+
+        return penalty;
     }
 
     /**
@@ -270,10 +288,14 @@ public final class ItemWeightSystem {
      */
     private static double getItemWeight(ItemStack stack) {
         String itemName = Registries.ITEM.getId(stack.getItem()).getPath();
-        return ITEM_WEIGHTS.getOrDefault(itemName, 0.01); // Default 0.01 for unknown items
+        double weight = ITEM_WEIGHTS.getOrDefault(itemName, 0.01);
+        TutorialMod.LOGGER.trace("       └─ Item weight lookup: {}", String.format("%.2f", weight));
+        return weight;
     }
 
     public static double getItemWeight(String itemName) {
-        return ITEM_WEIGHTS.getOrDefault(itemName, 0.01);
+        double weight = ITEM_WEIGHTS.getOrDefault(itemName, 0.01);
+        TutorialMod.LOGGER.debug("⚖️  [WEIGHT_LOOKUP] {} weight: {}", itemName, String.format("%.2f", weight));
+        return weight;
     }
 }

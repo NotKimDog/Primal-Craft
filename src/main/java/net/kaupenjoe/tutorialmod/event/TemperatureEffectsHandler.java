@@ -1,6 +1,7 @@
 package net.kaupenjoe.tutorialmod.event;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.kaupenjoe.tutorialmod.TutorialMod;
 import net.kaupenjoe.tutorialmod.util.TemperatureSystem;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
@@ -16,8 +17,13 @@ import java.util.UUID;
  */
 public final class TemperatureEffectsHandler {
     private static final Map<UUID, Integer> playerTicks = new HashMap<>();
+    private static int effectApplications = 0;
 
     public static void register() {
+        TutorialMod.LOGGER.info("🌡️  [TEMPERATURE_EFFECTS] Registering TemperatureEffectsHandler");
+        TutorialMod.LOGGER.debug("   ├─ Temperature-based effect system");
+        TutorialMod.LOGGER.debug("   └─ Event listener registered");
+
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             int serverTick = server.getTicks();
             for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
@@ -30,6 +36,8 @@ public final class TemperatureEffectsHandler {
                 }
             }
         });
+
+        TutorialMod.LOGGER.info("✅ [TEMPERATURE_EFFECTS] Handler registered");
     }
 
     /**
@@ -38,21 +46,31 @@ public final class TemperatureEffectsHandler {
     private static void applyTemperatureEffects(ServerPlayerEntity player, double temperature, int serverTick) {
         ServerWorld world = (ServerWorld) player.getEntityWorld();
 
+        TutorialMod.LOGGER.trace("🌡️  [TEMP_EFFECTS] {} temperature: {}°C",
+            player.getName().getString(), String.format("%.1f", temperature));
+
         // EXTREME COLD effects (<-10°C)
         if (temperature < -10) {
+            effectApplications++;
+            TutorialMod.LOGGER.debug("❄️  [EFFECT] Event #{}: {} EXTREME COLD",
+                effectApplications, player.getName().getString());
+            TutorialMod.LOGGER.trace("   ├─ Applying: Slowness I");
+            TutorialMod.LOGGER.trace("   ├─ Applying: Mining Fatigue I");
+
             // Freezing - slowness and mining fatigue
             player.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, 100, 0, false, false, false));
             player.addStatusEffect(new StatusEffectInstance(StatusEffects.MINING_FATIGUE, 100, 0, false, false, false));
 
             // Very cold - damage over time
-            if (temperature < -20 && serverTick % 40 == 0) { // Every 2 seconds
+            if (temperature < -20 && serverTick % 40 == 0) {
+                TutorialMod.LOGGER.debug("   └─ Applying: Freeze damage 1.0");
                 player.damage(world, player.getDamageSources().freeze(), 1.0f);
             }
         }
         // VERY COLD effects (-10°C to 5°C)
         else if (temperature < 5) {
-            // Slight slowness
             if (serverTick % 60 == 0) {
+                TutorialMod.LOGGER.trace("❄️  [EFFECT] {} COLD: Slowness", player.getName().getString());
                 player.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, 60, 0, false, false, false));
             }
         }
@@ -60,24 +78,23 @@ public final class TemperatureEffectsHandler {
         else if (temperature >= 15 && temperature <= 25) {
             // Give slight regeneration bonus when comfortable
             if (serverTick % 100 == 0) {
+                TutorialMod.LOGGER.trace("☀️  [EFFECT] {} COMFORTABLE: Regeneration", player.getName().getString());
                 player.addStatusEffect(new StatusEffectInstance(StatusEffects.REGENERATION, 40, 0, false, false, false));
             }
         }
         // HOT effects (35°C to 45°C)
         else if (temperature > 35 && temperature <= 45) {
-            // Heat exhaustion - hunger and weakness
             if (serverTick % 80 == 0) {
+                TutorialMod.LOGGER.debug("🔥 [EFFECT] {} HOT: Hunger + Weakness", player.getName().getString());
                 player.addStatusEffect(new StatusEffectInstance(StatusEffects.HUNGER, 80, 0, false, false, false));
                 player.addStatusEffect(new StatusEffectInstance(StatusEffects.WEAKNESS, 80, 0, false, false, false));
             }
         }
         // EXTREME HEAT effects (>45°C)
         else if (temperature > 45) {
-            // Severe heat - nausea, weakness, hunger
-            //player.addStatusEffect(new StatusEffectInstance(StatusEffects.WEAKNESS, 100, 1, false, false, false));
-            //player.addStatusEffect(new StatusEffectInstance(StatusEffects.HUNGER, 100, 1, false, false, false));
-
-            // Very hot - damage over time
+            effectApplications++;
+            TutorialMod.LOGGER.debug("🔥 [EFFECT] Event #{}: {} EXTREME HEAT",
+                effectApplications, player.getName().getString());
             if (temperature > 55 && serverTick % 40 == 0) { // Every 2 seconds
                 player.damage(world, player.getDamageSources().onFire(), 1.0f);
             }

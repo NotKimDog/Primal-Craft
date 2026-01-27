@@ -2,6 +2,7 @@ package net.kaupenjoe.tutorialmod.event;
 
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.kaupenjoe.tutorialmod.TutorialMod;
 import net.kaupenjoe.tutorialmod.block.ModBlocks;
 import net.kaupenjoe.tutorialmod.network.ChatAnimatedPayload;
 import net.kaupenjoe.tutorialmod.util.ItemWeightSystem;
@@ -21,15 +22,12 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
 
 public class VeinMinerHandler {
-    private static final Logger LOGGER = LoggerFactory.getLogger("KimDog VeinMiner");
     private static final java.util.Set<Block> ORE_BLOCKS = new java.util.HashSet<>();
     private static final int MAX_BLOCKS = 512;
     private static final int MAX_RANGE = 64;
@@ -41,8 +39,11 @@ public class VeinMinerHandler {
     private static final boolean CONSOLIDATE_DROPS = true;
     private static final boolean ENABLE_PARTICLE_TRAILS = true;
     private static final boolean ENABLE_BREAK_INDICATORS = true;
-    private static final String PARTICLE_EFFECT = "enchant"; // rainbow, ore, enchant, smoke
+    private static final String PARTICLE_EFFECT = "enchant";
     private static final int PARTICLE_COUNT = 10;
+
+    private static int veinMinesTriggered = 0;
+    private static int totalBlocksMined = 0;
 
     private static String getRandomParticleEffect() {
         String[] effects = {"rainbow", "ore", "enchant", "smoke"};
@@ -50,8 +51,7 @@ public class VeinMinerHandler {
     }
 
     static {
-        // Initialize ore blocks
-        ORE_BLOCKS.add(Blocks.COAL_ORE);
+        // ...existing code...
         ORE_BLOCKS.add(Blocks.DEEPSLATE_COAL_ORE);
         ORE_BLOCKS.add(Blocks.IRON_ORE);
         ORE_BLOCKS.add(Blocks.DEEPSLATE_IRON_ORE);
@@ -75,6 +75,13 @@ public class VeinMinerHandler {
     }
 
     public static void register() {
+        TutorialMod.LOGGER.info("⛏️  [VEINMINER] Registering VeinMiner event handler");
+        TutorialMod.LOGGER.debug("   ├─ Max blocks per vein: {}", MAX_BLOCKS);
+        TutorialMod.LOGGER.debug("   ├─ Max search range: {}", MAX_RANGE);
+        TutorialMod.LOGGER.debug("   ├─ Particle effects: {}", ENABLE_PARTICLES ? "ENABLED" : "DISABLED");
+        TutorialMod.LOGGER.debug("   ├─ Cascade breaking: {}", ENABLE_CASCADE ? "ENABLED" : "DISABLED");
+        TutorialMod.LOGGER.debug("   └─ Registered ore types: {}", ORE_BLOCKS.size());
+
         PlayerBlockBreakEvents.AFTER.register((world, player, pos, state, blockEntity) -> {
             if (!(world instanceof ServerWorld)) return;
             if (!(player instanceof ServerPlayerEntity)) return;
@@ -87,23 +94,35 @@ public class VeinMinerHandler {
                 return;
             }
 
+            veinMinesTriggered++;
+            TutorialMod.LOGGER.debug("⛏️  [VEINMINE] Event #{} - {} broke {}",
+                veinMinesTriggered, serverPlayer.getName().getString(), state.getBlock().getName().getString());
+            TutorialMod.LOGGER.trace("   ├─ Position: X={}, Y={}, Z={}", pos.getX(), pos.getY(), pos.getZ());
+
             // Find all adjacent ore blocks of the same type (BFS)
             Predicate<BlockState> matchPredicate = createMatchPredicate(state);
             List<BlockPos> veinBlocks = searchVein(serverWorld, pos, state, MAX_BLOCKS - 1, MAX_RANGE, matchPredicate);
 
             if (veinBlocks.isEmpty()) {
-                return; // No adjacent ores found
+                TutorialMod.LOGGER.trace("   └─ No adjacent ore blocks found (single block)");
+                return;
             }
+
+            TutorialMod.LOGGER.debug("   ├─ Vein size: {} blocks (including initial)", veinBlocks.size() + 1);
 
             // Check if player has enough stamina for veinmining
             double weightPenalty = ItemWeightSystem.calculateInventoryWeightPenalty(serverPlayer);
             double totalVeinCost = veinBlocks.size() * 0.5 * (1.0 + weightPenalty * 0.3);
 
+            TutorialMod.LOGGER.trace("   ├─ Weight penalty: {}", String.format("%.2f%%", weightPenalty * 100));
+            TutorialMod.LOGGER.trace("   ├─ Total vein cost: {}", String.format("%.2f", totalVeinCost));
+            TutorialMod.LOGGER.trace("   ├─ Current stamina: {}", String.format("%.1f", StaminaSystem.get(serverPlayer)));
+
             if (!StaminaSystem.tryConsume(serverPlayer, totalVeinCost)) {
                 return; // Not enough stamina to veinmine
             }
 
-            LOGGER.info("VeinMiner: Breaking {} blocks for {}", veinBlocks.size(), serverPlayer.getName().getString());
+            TutorialMod.LOGGER.info("VeinMiner: Breaking {} blocks for {}", veinBlocks.size(), serverPlayer.getName().getString());
 
             // Spawn activation animation
             spawnActivationAnimation(serverWorld, pos);
@@ -125,7 +144,6 @@ public class VeinMinerHandler {
     }
 
     private static void applyBreaksWithCascade(ServerPlayerEntity player, ServerWorld world, List<BlockPos> positions, BlockPos originPos, ItemStack tool) {
-        LOGGER.info(" Breaking {} blocks with cascade effect...", positions.size());
 
         sendVeinChat(player, "Mining " + positions.size() + " blocks!");
 
@@ -149,7 +167,7 @@ public class VeinMinerHandler {
                             BlockState state = world.getBlockState(blockPos);
                             if (state.isAir()) return;
 
-                            LOGGER.info(" Breaking block {} at {}, {}, {}", index + 1, blockPos.getX(), blockPos.getY(), blockPos.getZ());
+                            TutorialMod.LOGGER.info(" Breaking block {} at {}, {}, {}", index + 1, blockPos.getX(), blockPos.getY(), blockPos.getZ());
 
                             // Particle trail from origin to current block
                             if (ENABLE_PARTICLE_TRAILS) {
@@ -211,7 +229,7 @@ public class VeinMinerHandler {
     }
 
     private static void applyBreaksInstantly(ServerPlayerEntity player, ServerWorld world, List<BlockPos> positions, BlockPos originPos, ItemStack tool) {
-        LOGGER.info(" Breaking {} blocks instantly...", positions.size());
+        TutorialMod.LOGGER.info(" Breaking {} blocks instantly...", positions.size());
 
         sendVeinChat(player, "Mining " + positions.size() + " blocks!");
 
@@ -293,7 +311,7 @@ public class VeinMinerHandler {
                     break;
             }
         } catch (Exception e) {
-            LOGGER.debug("Particle effect error: {}", e.getMessage());
+            TutorialMod.LOGGER.debug("Particle effect error: {}", e.getMessage());
         }
     }
 
@@ -392,7 +410,7 @@ public class VeinMinerHandler {
 
             world.playSound(null, pos, net.minecraft.sound.SoundEvents.BLOCK_BEACON_ACTIVATE, net.minecraft.sound.SoundCategory.BLOCKS, 0.8f, 1.5f);
         } catch (Exception e) {
-            LOGGER.debug("Activation animation error: {}", e.getMessage());
+            TutorialMod.LOGGER.debug("Activation animation error: {}", e.getMessage());
         }
     }
 
@@ -420,7 +438,7 @@ public class VeinMinerHandler {
             world.playSound(null, pos, net.minecraft.sound.SoundEvents.BLOCK_BEACON_DEACTIVATE, net.minecraft.sound.SoundCategory.BLOCKS, 1.0f, 1.2f);
             world.playSound(null, pos, net.minecraft.sound.SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, net.minecraft.sound.SoundCategory.PLAYERS, 0.8f, 2.0f);
         } catch (Exception e) {
-            LOGGER.debug("Completion animation error: {}", e.getMessage());
+            TutorialMod.LOGGER.debug("Completion animation error: {}", e.getMessage());
         }
     }
 
@@ -471,7 +489,7 @@ public class VeinMinerHandler {
                 world.playSound(null, pos, net.minecraft.sound.SoundEvents.ENTITY_ITEM_PICKUP, net.minecraft.sound.SoundCategory.PLAYERS, 0.6f, 1.2f + (float) Math.random() * 0.3f);
             }
         } catch (Exception e) {
-            LOGGER.debug("Sound effect error: {}", e.getMessage());
+            TutorialMod.LOGGER.debug("Sound effect error: {}", e.getMessage());
         }
     }
 

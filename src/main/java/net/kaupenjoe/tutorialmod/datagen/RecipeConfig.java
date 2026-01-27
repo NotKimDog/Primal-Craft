@@ -1,5 +1,6 @@
 package net.kaupenjoe.tutorialmod.datagen;
 
+import net.kaupenjoe.tutorialmod.TutorialMod;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemConvertible;
 import net.minecraft.item.Items;
@@ -26,9 +27,16 @@ public class RecipeConfig {
     public static final List<CompactingRecipe> COMPACTING_RECIPES = new ArrayList<>();
 
     static {
+        long startTime = System.currentTimeMillis();
+        TutorialMod.LOGGER.debug("📝 Initializing RecipeConfig...");
+
         initializeShapedRecipes();
         initializeShapelessRecipes();
         initializeCompactingRecipes();
+
+        long elapsed = System.currentTimeMillis() - startTime;
+        TutorialMod.LOGGER.debug("  ✓ RecipeConfig initialized with {} shaped, {} shapeless, {} compacting recipes in {}ms",
+            SHAPED_RECIPES.size(), SHAPELESS_RECIPES.size(), COMPACTING_RECIPES.size(), elapsed);
     }
 
     /**
