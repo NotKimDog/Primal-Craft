@@ -2,7 +2,7 @@ package net.kaupenjoe.tutorialmod;
 
 import net.fabricmc.fabric.api.datagen.v1.DataGeneratorEntrypoint;
 import net.fabricmc.fabric.api.datagen.v1.FabricDataGenerator;
-import net.kaupenjoe.tutorialmod.datagen.*;
+import net.kaupenjoe.tutorialmod.datagen.ModRecipeProvider;
 import net.kaupenjoe.tutorialmod.enchantment.ModEnchantments;
 import net.kaupenjoe.tutorialmod.trim.ModTrimMaterials;
 import net.kaupenjoe.tutorialmod.trim.ModTrimPatterns;
@@ -13,15 +13,10 @@ import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
 
-import java.util.HashSet;
-
 /**
  * Advanced data generator entry point for KimDog's SMP Mod.
- * Features:
- * - Automated provider registration with dependency ordering
- * - Performance tracking and validation
- * - Robust error handling with detailed logging
- * - Professional output formatting
+ * Consolidated architecture - all datagen logic is centralized in DatagenHelper
+ * Only ModRecipeProvider is registered as it uses DatagenHelper configuration
  *
  * @author KimDog Studios
  * @version 1.21.X
@@ -37,60 +32,16 @@ public class TutorialModDataGenerator implements DataGeneratorEntrypoint {
 
 		FabricDataGenerator.Pack pack = fabricDataGenerator.createPack();
 		int successCount = 0;
-		int totalProviders = 6;
+		int totalProviders = 1;
 
-		// Register providers in dependency order with error handling
-		// Tags must be first as other providers depend on them
-		try {
-			pack.addProvider(ModBlockTagProvider::new);
-			TutorialMod.LOGGER.info("  ✓ Registered: Block Tags [Tags]");
-			successCount++;
-		} catch (Exception e) {
-			TutorialMod.LOGGER.error("  ✗ Failed to register: Block Tags - {}", e.getMessage(), e);
-		}
-
-		try {
-			pack.addProvider(ModItemTagProvider::new);
-			TutorialMod.LOGGER.info("  ✓ Registered: Item Tags [Tags]");
-			successCount++;
-		} catch (Exception e) {
-			TutorialMod.LOGGER.error("  ✗ Failed to register: Item Tags - {}", e.getMessage(), e);
-		}
-
-		// Loot tables depend on block tags
-		try {
-			pack.addProvider(ModLootTableProvider::new);
-			TutorialMod.LOGGER.info("  ✓ Registered: Loot Tables [Loot]");
-			successCount++;
-		} catch (Exception e) {
-			TutorialMod.LOGGER.error("  ✗ Failed to register: Loot Tables - {}", e.getMessage(), e);
-		}
-
-		// Models can be generated independently
-		try {
-			pack.addProvider(ModModelProvider::new);
-			TutorialMod.LOGGER.info("  ✓ Registered: Models & Block States [Models]");
-			successCount++;
-		} catch (Exception e) {
-			TutorialMod.LOGGER.error("  ✗ Failed to register: Models & Block States - {}", e.getMessage(), e);
-		}
-
-		// Recipes depend on item tags
+		// Only register the consolidated ModRecipeProvider
+		// All other datagen logic is now centralized in DatagenHelper
 		try {
 			pack.addProvider(ModRecipeProvider::new);
-			TutorialMod.LOGGER.info("  ✓ Registered: Recipes [Recipes]");
+			TutorialMod.LOGGER.info("  ✓ Registered: Recipe Generator [Recipes]");
 			successCount++;
 		} catch (Exception e) {
-			TutorialMod.LOGGER.error("  ✗ Failed to register: Recipes - {}", e.getMessage(), e);
-		}
-
-		// Registry data (trims, enchantments, world gen)
-		try {
-			pack.addProvider(ModRegistryDataGenerator::new);
-			TutorialMod.LOGGER.info("  ✓ Registered: Registry Data [Registry]");
-			successCount++;
-		} catch (Exception e) {
-			TutorialMod.LOGGER.error("  ✗ Failed to register: Registry Data - {}", e.getMessage(), e);
+			TutorialMod.LOGGER.error("  ✗ Failed to register: Recipe Generator - {}", e.getMessage(), e);
 		}
 
 		long elapsed = System.currentTimeMillis() - startTime;
@@ -98,15 +49,17 @@ public class TutorialModDataGenerator implements DataGeneratorEntrypoint {
 
 		// Summary statistics
 		TutorialMod.LOGGER.info("┌────────────────────────────────────────────────────────────┐");
-		TutorialMod.LOGGER.info("│  Provider Registration Summary:                            │");
-		TutorialMod.LOGGER.info("│    • Total Providers: {}                                    │", totalProviders);
-		TutorialMod.LOGGER.info("│    • Registered Successfully: {}                            │", successCount);
-		TutorialMod.LOGGER.info("│    • Failed: {}                                             │", failCount);
-		TutorialMod.LOGGER.info("│    • Time Taken: {}ms                                      │", elapsed);
+		TutorialMod.LOGGER.info("│  Provider Registration Summary:                             │");
+		TutorialMod.LOGGER.info("│    ✓ Total Providers: {}                                    │", totalProviders);
+		TutorialMod.LOGGER.info("│    ✓ Registered Successfully: {}                            │", successCount);
+		TutorialMod.LOGGER.info("│    ✗ Failed: {}                                             │", failCount);
+		TutorialMod.LOGGER.info("│    ⏱  Time Taken: {}ms                                      │", elapsed);
 		TutorialMod.LOGGER.info("└────────────────────────────────────────────────────────────┘");
 
 		if (failCount > 0) {
-			TutorialMod.LOGGER.warn("⚠ Some providers failed to register! Check logs above for details.");
+			TutorialMod.LOGGER.warn("⚠ Some data generators failed! Check above for details.");
+		} else {
+			TutorialMod.LOGGER.info("✅ All data generators registered successfully!");
 		}
 
 		// Pretty-print all registered blocks and items for quick visibility
@@ -149,7 +102,7 @@ public class TutorialModDataGenerator implements DataGeneratorEntrypoint {
 			registryCount++;
 			TutorialMod.LOGGER.info("  ✓ Enchantments");
 
-			// World generation features
+			// World generation
 			registryBuilder.addRegistry(RegistryKeys.CONFIGURED_FEATURE, ModConfiguredFeatures::bootstrap);
 			registryCount++;
 			TutorialMod.LOGGER.info("  ✓ Configured Features");
@@ -157,27 +110,20 @@ public class TutorialModDataGenerator implements DataGeneratorEntrypoint {
 			registryBuilder.addRegistry(RegistryKeys.PLACED_FEATURE, ModPlacedFeatures::bootstrap);
 			registryCount++;
 			TutorialMod.LOGGER.info("  ✓ Placed Features");
-
 		} catch (Exception e) {
-			TutorialMod.LOGGER.error("Failed to build registries: {}", e.getMessage(), e);
+			TutorialMod.LOGGER.error("Failed to build custom registries: {}", e.getMessage(), e);
 		}
 
 		long elapsed = System.currentTimeMillis() - startTime;
 		TutorialMod.LOGGER.info("Built {} custom registries in {}ms", registryCount, elapsed);
 	}
 
-	@Override
-	public String getEffectiveModId() {
-		return TutorialMod.MOD_ID;
-	}
-
+	/**
+	 * Log registry state for visibility
+	 */
 	private void logRegistryState(String title, java.util.List<Identifier> ids) {
-		TutorialMod.LOGGER.info("├─ {} ({}):", title, ids.size());
-		ids.forEach(id -> TutorialMod.LOGGER.info("│   • {}", id));
-		var seen = new HashSet<Identifier>();
-		var duplicates = ids.stream().filter(id -> !seen.add(id)).toList();
-		if (!duplicates.isEmpty()) {
-			TutorialMod.LOGGER.warn("│   ⚠ Duplicates in {}: {}", title, duplicates);
-		}
+		TutorialMod.LOGGER.info("┌─ {} ({}):", title, ids.size());
+		ids.forEach(id -> TutorialMod.LOGGER.info("│   ✓ {}", id));
+		TutorialMod.LOGGER.info("│");
 	}
 }
