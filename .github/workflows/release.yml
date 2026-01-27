@@ -1,21 +1,64 @@
 name: release
 
 on:
-  push:
-    tags:
-      - 'v*'
-      - 'V*'
   workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Release type (major, minor, patch)'
+        required: true
+        default: 'minor'
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
 
 permissions:
   contents: write
 
 jobs:
-  build-and-release:
+  create-release:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get latest tag
+        id: get_tag
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+          echo "Latest tag: $LATEST_TAG"
+
+      - name: Calculate new version
+        id: new_version
+        run: |
+          LATEST=${{ steps.get_tag.outputs.latest_tag }}
+          LATEST=${LATEST#v}  # Remove 'v' prefix
+          
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$LATEST"
+          MAJOR=${MAJOR:-0}
+          MINOR=${MINOR:-0}
+          PATCH=${PATCH:-0}
+          
+          RELEASE_TYPE="${{ github.event.inputs.release_type }}"
+          
+          if [ "$RELEASE_TYPE" = "major" ]; then
+            MAJOR=$((MAJOR + 1))
+            MINOR=0
+            PATCH=0
+          elif [ "$RELEASE_TYPE" = "minor" ]; then
+            MINOR=$((MINOR + 1))
+            PATCH=0
+          else
+            PATCH=$((PATCH + 1))
+          fi
+          
+          NEW_VERSION="v$MAJOR.$MINOR.$PATCH"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "New version: $NEW_VERSION"
 
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v4
@@ -35,18 +78,38 @@ jobs:
       - name: Build release JAR
         run: ./gradlew build --no-daemon
 
-      - name: Capture artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-libs
-          path: build/libs/*.jar
+      - name: Get JAR filename
+        id: jar_name
+        run: |
+          JAR_FILE=$(ls build/libs/*.jar | head -1)
+          JAR_NAME=$(basename "$JAR_FILE")
+          echo "jar_path=$JAR_FILE" >> $GITHUB_OUTPUT
+          echo "jar_name=$JAR_NAME" >> $GITHUB_OUTPUT
+          echo "JAR file: $JAR_NAME"
 
-      - name: Create GitHub Release
+      - name: Create Git tag
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git tag -a ${{ steps.new_version.outputs.new_version }} -m "Release ${{ steps.new_version.outputs.new_version }}"
+          git push origin ${{ steps.new_version.outputs.new_version }}
+
+      - name: Create GitHub Release with JAR
         uses: ncipollo/release-action@v1
         with:
-          tag: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
+          tag: ${{ steps.new_version.outputs.new_version }}
+          name: Release ${{ steps.new_version.outputs.new_version }}
+          body: |
+            # KimDog SMP Release ${{ steps.new_version.outputs.new_version }}
+            
+            Automatic release created for Minecraft Fabric Mod.
+            
+            **Release Type**: ${{ github.event.inputs.release_type }}
+            **JAR File**: ${{ steps.jar_name.outputs.jar_name }}
+            
+            Download the JAR file below and place it in your mods folder.
           draft: false
           prerelease: false
+          artifacts: ${{ steps.jar_name.outputs.jar_path }}
           artifacts: build/libs/*.jar
           artifactErrorsFailBuild: true
