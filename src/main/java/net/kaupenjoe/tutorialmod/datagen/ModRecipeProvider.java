@@ -66,27 +66,23 @@ public class ModRecipeProvider extends FabricRecipeProvider {
                 // ===== CUSTOM RECIPES FROM CONFIGURATION =====
                 // Load shaped recipes from config
                 RecipeConfig.SHAPED_RECIPES.forEach((recipeId, recipe) -> {
-                    createShaped(RecipeCategory.MISC, recipe.output)
-                        .apply(builder -> {
-                            for (String line : recipe.pattern) {
-                                if (!line.isEmpty()) {
-                                    builder.pattern(line);
-                                }
-                            }
-                            recipe.ingredients.forEach(builder::input);
-                            builder.criterion(hasItem(recipe.criterion), conditionsFromItem(recipe.criterion));
-                        })
-                        .offerTo(exporter, Identifier.of(TutorialMod.MOD_ID, recipeId));
+                    ShapedRecipeJsonBuilder shapeBuilder = createShaped(RecipeCategory.MISC, recipe.output);
+                    for (String line : recipe.pattern) {
+                        if (!line.isEmpty()) {
+                            shapeBuilder.pattern(line);
+                        }
+                    }
+                    recipe.ingredients.forEach((ch, item) -> shapeBuilder.input(ch, item));
+                    shapeBuilder.criterion(hasItem(recipe.criterion), conditionsFromItem(recipe.criterion));
+                    shapeBuilder.offerTo(exporter, recipeId);
                 });
 
                 // Load shapeless recipes from config
                 RecipeConfig.SHAPELESS_RECIPES.forEach((recipeId, recipe) -> {
-                    createShapeless(RecipeCategory.MISC, recipe.output, recipe.count)
-                        .apply(builder -> {
-                            recipe.ingredients.forEach(builder::input);
-                            builder.criterion(hasItem(recipe.criterion), conditionsFromItem(recipe.criterion));
-                        })
-                        .offerTo(exporter, Identifier.of(TutorialMod.MOD_ID, recipeId));
+                    ShapelessRecipeJsonBuilder shapelessBuilder = createShapeless(RecipeCategory.MISC, recipe.output, recipe.count);
+                    recipe.ingredients.forEach(shapelessBuilder::input);
+                    shapelessBuilder.criterion(hasItem(recipe.criterion), conditionsFromItem(recipe.criterion));
+                    shapelessBuilder.offerTo(exporter, recipeId);
                 });
 
                 int customCount = RecipeConfig.SHAPED_RECIPES.size() + RecipeConfig.SHAPELESS_RECIPES.size();
@@ -127,7 +123,6 @@ public class ModRecipeProvider extends FabricRecipeProvider {
              */
             private void generateToolRecipe(String toolType, ItemConvertible output, ItemConvertible material, Ingredient stick) {
                 String materialName = DatagenHelper.getMaterialName(output.asItem().toString());
-                String patternId = materialName + "_" + toolType;
                 RecipeCategory category = toolType.equals("sword") ? RecipeCategory.COMBAT : RecipeCategory.TOOLS;
 
                 ShapedRecipeJsonBuilder builder = createShaped(category, output);
@@ -164,7 +159,7 @@ public class ModRecipeProvider extends FabricRecipeProvider {
                 builder.input('M', material);
                 builder.input('S', stick);
                 builder.criterion(hasItem(material), conditionsFromItem(material));
-                builder.offerTo(exporter, Identifier.of(TutorialMod.MOD_ID, patternId));
+                builder.offerTo(exporter);
             }
 
             /**
@@ -190,7 +185,6 @@ public class ModRecipeProvider extends FabricRecipeProvider {
              * Generate a single armor recipe
              */
             private void generateArmorRecipe(String armorType, ItemConvertible output, ItemConvertible material) {
-                String materialName = DatagenHelper.getMaterialName(output.asItem().toString());
                 ShapedRecipeJsonBuilder builder = createShaped(RecipeCategory.COMBAT, output);
 
                 // Apply the correct pattern
@@ -217,7 +211,7 @@ public class ModRecipeProvider extends FabricRecipeProvider {
 
                 builder.input('M', material);
                 builder.criterion(hasItem(material), conditionsFromItem(material));
-                builder.offerTo(exporter, Identifier.of(TutorialMod.MOD_ID, materialName));
+                builder.offerTo(exporter);
             }
         };
     }
