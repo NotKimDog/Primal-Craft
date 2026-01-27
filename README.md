@@ -1,4 +1,4 @@
-# KimDog SMP Overhaul (Fabric 1.21.11)
+# Primal Craft Overhaul (Fabric 1.21.11)
 A survival-focused Fabric modpack-style overhaul built from Kaupenjoe's tutorial base and expanded with systemic mechanics, new content, and quality-of-life HUD/UI polish.
 
 ## Highlights
