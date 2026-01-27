@@ -322,7 +322,6 @@ publishing {
 		// The repositories here will be used for publishing your artifact, not for
 		// retrieving dependencies.
 	}
-// ...existing code...
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1409,7 +1408,7 @@ tasks.register('validateEnvironment') {
 			println "  ❌ ${errors.size()} error(s) and ${warnings.size()} warning(s)"
 			logToFile("")
 			logToFile("❌ ${errors.size()} error(s) and ${warnings.size()} warning(s):")
-			errors.each { logToFile("     • ${it}") }
+			errors.each { logToFile("     • ERROR: ${it}") }
 		}
 
 		println ""
@@ -1477,6 +1476,209 @@ tasks.register('fullHelp') {
 	}
 }
 
+// Release validation task - check all prerequisites before release
+tasks.register('releaseValidation') {
+	group = 'versioning'
+	description = 'Validate all release prerequisites before running autoRelease'
+
+	doLast {
+		def isValid = validateRelease()
+		if (!isValid) {
+			println ""
+			println "⚠️  Some validations failed. Please review and fix before releasing."
+			println ""
+		}
+	}
+}
+
+// Dry-run task - show what autoRelease would do without making changes
+tasks.register('autoReleaseDryRun') {
+	group = 'versioning'
+	description = 'Preview what autoRelease would do WITHOUT making any changes (dry-run mode)'
+
+	doLast {
+		println ""
+		println "╔════════════════════════════════════════════════════════════╗"
+		println "║  🔍 AUTO-RELEASE DRY RUN (PREVIEW MODE)                    ║"
+		println "╚════════════════════════════════════════════════════════════╝"
+		println ""
+		println "This command shows what WOULD happen, but makes NO changes."
+		println ""
+
+		// Show current state
+		println "📊 CURRENT STATE:"
+		println "  • Current Version: ${project.mod_version}"
+		println "  • Branch: ${getGitBranch()}"
+		println "  • Commit: ${getGitCommitShort()}"
+		println ""
+
+		// Detect version bump
+		def bumpType = detectVersionBumpType()
+		def oldVersion = project.mod_version
+		def newVersion = oldVersion
+
+		if (!bumpType) {
+			println "  ❌ No version bump would be triggered"
+			println "     (No feat:/fix:/breaking: commits found)"
+		} else {
+			def parts = oldVersion.tokenize('.')*.toInteger()
+			while (parts.size() < 3) parts << 0
+
+			switch (bumpType) {
+				case 'major': parts[0]++; parts[1]=0; parts[2]=0; break
+				case 'minor': parts[1]++; parts[2]=0; break
+				default: parts[2]++; break
+			}
+			newVersion = parts.join('.')
+
+			println "  ✅ Version WOULD be bumped:"
+			println "     • Type: ${bumpType.toUpperCase()}"
+			println "     • From: ${oldVersion}"
+			println "     • To: ${newVersion}"
+		}
+
+		// Show file changes
+		def changes = analyzeChanges()
+		println ""
+		println "📝 FILE CHANGES DETECTED:"
+		if (changes.totalCount > 0) {
+			println "  • Total files: ${changes.totalCount}"
+			if (changes.javaCount > 0) println "  • Java: ${changes.javaCount}"
+			if (changes.gradleCount > 0) println "  • Build config: ${changes.gradleCount}"
+			if (changes.jsonCount > 0) println "  • Data: ${changes.jsonCount}"
+			if (changes.otherCount > 0) println "  • Other: ${changes.otherCount}"
+		} else {
+			println "  • No changes detected"
+		}
+
+		// Show what would be committed
+		println ""
+		println "📋 ACTIONS THAT WOULD BE TAKEN:"
+		println "  ✓ Stage all changes (git add -A)"
+		if (bumpType) {
+			println "  ✓ Update gradle.properties (${oldVersion} → ${newVersion})"
+			println "  ✓ Create commit with detailed message"
+			println "  ✓ Create git tag (v${newVersion})"
+			println "  ✓ Push commits to origin"
+			println "  ✓ Push tags to origin"
+			println "  ✓ Generate CHANGELOG"
+		}
+
+		println ""
+		println "╔════════════════════════════════════════════════════════════╗"
+		println "║  ✅ DRY RUN COMPLETE                                       ║"
+		println "╚════════════════════════════════════════════════════════════╝"
+		println ""
+		println "Ready to proceed? Run:  gradle autoRelease"
+		println ""
+	}
+}
+
+// Generate release notes from changelog
+tasks.register('generateReleaseNotes') {
+	group = 'documentation'
+	description = 'Generate professional release notes from changelog (includes features, fixes, etc)'
+
+	doLast {
+		generateReleaseNotes()
+	}
+}
+
+// Cache utilities
+tasks.register('cacheInfo') {
+	group = 'build'
+	description = 'Show cache usage (gradle + loom cache)'
+	doLast {
+		println ""
+		println "╔════════════════════════════════════════════════════════════╗"
+		println "║  CACHE STATUS                                             ║"
+		println "╚════════════════════════════════════════════════════════════╝"
+		def gradleMB = gradleLocalCacheDir.directorySize() / 1024 / 1024
+		def loomDir = file('.gradle/loom-cache')
+		def loomMB = loomDir.exists() ? loomDir.directorySize() / 1024 / 1024 : 0
+		println "  • Gradle local cache: ${String.format('%.2f', gradleMB)} MB (${gradleLocalCacheDir})"
+		println "  • Loom cache:         ${String.format('%.2f', loomMB)} MB (${loomDir})"
+		logToFile("Cache status - Gradle: ${gradleMB} MB, Loom: ${loomMB} MB")
+	}
+}
+
+ tasks.register('cleanCache') {
+	group = 'build'
+	description = 'Clean local cache directory (cache/gradle) and loom cache'
+	doLast {
+		delete gradleLocalCacheDir
+		delete '.gradle/loom-cache'
+		gradleLocalCacheDir.mkdirs()
+		println "✓ Caches cleared"
+		logToFile("✓ Caches cleared (gradle + loom)")
+	}
+}
+
+// Warm cache by compiling only (skipping jar)
+tasks.register('warmCache') {
+	group = 'build'
+	description = 'Warm gradle/loom caches without packaging'
+	dependsOn 'classes'
+	doLast {
+		println "✓ Cache warmed via class compilation"
+		logToFile("✓ Cache warmed via classes task")
+	}
+}
+
+// Remind users in fullHelp
+tasks.named('fullHelp') {
+	doLast {
+		println ""
+		println "╔════════════════════════════════════════════════════════════╗"
+		println "║  COMPREHENSIVE BUILD SYSTEM DOCUMENTATION                 ║"
+		println "╚════════════════════════════════════════════════════════════╝"
+		println ""
+		println "🚀 QUICK START:"
+		println "     gradle build              - Standard build"
+		println "     gradle runClient          - Run game client"
+		println "     gradle runServer          - Run game server"
+		println ""
+		println "📦 BUILD TASKS:"
+		println "     gradle build              - Full build with datagen"
+		println "     gradle quickBuild         - Fast incremental build"
+		println "     gradle clean              - Clean build artifacts"
+		println "     gradle deepClean          - Clean everything (including cache)"
+		println ""
+		println "🔧 DATAGEN:"
+		println "     gradle runDatagen         - Run datagen manually"
+		println "     gradle build              - Auto-runs datagen (enabled by default)"
+		println "     -PautoDatagen=false       - Disable auto datagen"
+		println ""
+		println "📊 ANALYSIS & VERIFICATION:"
+		println "     gradle buildInfo          - Show build configuration"
+		println "     gradle versionInfo        - Show version & git info"
+		println "     gradle dependencyInfo     - Show all dependencies"
+		println "     gradle buildAnalytics     - Show build statistics"
+		println "     gradle verifyBuild        - Verify build integrity"
+		println "     gradle validateEnvironment- Validate build environment"
+		println "     gradle profileBuild       - Performance profiling tips"
+		println ""
+		println "📋 LOGGING & REPORTING:"
+		println "     gradle viewLog            - View latest build log"
+		println "     gradle cleanLogs          - Clean old logs (keeps 10)"
+		println "     gradle buildReport        - Generate build report"
+		println "     gradle archiveBuilds      - Backup build artifacts"
+		println ""
+		println "💡 USEFUL FLAGS:"
+		println "     gradle build --profile    - Profile build performance"
+		println "     gradle build --parallel   - Use parallel compilation"
+		println "     gradle build --build-cache- Use build cache"
+		println "     gradle -x test            - Skip tests"
+		println ""
+		println "🆘 HELP:"
+		println "     gradle fullHelp           - Show this message"
+		println "     gradle showTasks          - Show custom tasks only"
+		println "     gradle tasks              - Show all Gradle tasks"
+		println ""
+	}
+}
+
+
 // Update showTasks to reference fullHelp
 tasks.named('showTasks') {
 	doLast {
@@ -1519,71 +1721,21 @@ tasks.named('showTasks') {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// ADVANCED LOCAL CACHING (cache/ directory) & VERSION AUTOMATION
+// RELEASE VALIDATION & SAFETY CHECKS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-def cacheRoot = new File("${rootDir}/cache")
-def gradleLocalCacheDir = new File(cacheRoot, "gradle")
-if (!cacheRoot.exists()) cacheRoot.mkdirs()
-if (!gradleLocalCacheDir.exists()) gradleLocalCacheDir.mkdirs()
-
-gradle.settingsEvaluated { settings ->
-	settings.buildCache {
-		local {
-			enabled = true
-			directory = gradleLocalCacheDir
-			removeUnusedEntriesAfterDays = 30
-		}
-	}
-}
-
-// Helpers for version bumping (mod_version in gradle.properties)
-def readPropertiesFile() {
-	def propsFile = file("gradle.properties")
-	def props = new Properties()
-	propsFile.withInputStream { props.load(it) }
-	return [props, propsFile]
-}
-
-def writeVersion(Properties props, File propsFile, String newVersion) {
-	props.setProperty('mod_version', newVersion)
-	propsFile.withOutputStream { props.store(it, "Updated by version bump task") }
-	logToFile("🔖 Version bumped to ${newVersion}")
-}
-
-def bumpVersion(String mode) {
-	def (props, propsFile) = readPropertiesFile()
-	def current = props.getProperty('mod_version', '0.1.0')
-	def parts = current.tokenize('.')*.toInteger()
-	while (parts.size() < 3) parts << 0
-	switch (mode) {
-		case 'major': parts[0]++; parts[1]=0; parts[2]=0; break
-		case 'minor': parts[1]++; parts[2]=0; break
-		default: parts[2]++; break
-	}
-	return [props, propsFile, parts.join('.')]
-}
-
-// Git helper functions for auto-commit
-def getGitDiff() {
+// Helper functions for change analysis
+def getStagedChanges() {
 	try {
-		return "git diff --name-status HEAD".execute().text
+		return "git diff --cached --name-only".execute().text.split('\n').findAll { it.trim() }
 	} catch (Exception e) {
-		return ""
+		return []
 	}
 }
 
 def getUnstagedChanges() {
 	try {
 		return "git diff --name-only".execute().text.split('\n').findAll { it.trim() }
-	} catch (Exception e) {
-		return []
-	}
-}
-
-def getStagedChanges() {
-	try {
-		return "git diff --cached --name-only".execute().text.split('\n').findAll { it.trim() }
 	} catch (Exception e) {
 		return []
 	}
@@ -1709,29 +1861,30 @@ def createAutomatedCommit(String bumpType) {
 def createGitTag() {
 	try {
 		def tagName = "v${project.mod_version}"
-		def tagMsg = "Release ${tagName} - Automated Release"
+		def checkTagProcess = "git tag --list ${tagName}".execute()
+		checkTagProcess.waitFor()
 
-		// Create annotated tag
-		def createProcess = "git tag -a ${tagName} -m \"${tagMsg}\"".execute()
-		createProcess.waitFor()
+		if (checkTagProcess.text.trim()) {
+			println ""
+			println "⚠️  Tag ${tagName} already exists"
+			println ""
+			return false
+		}
 
-		if (createProcess.exitValue() == 0) {
+		def process = "git tag -a ${tagName} -m \"Release ${project.mod_version}\"".execute()
+		process.waitFor()
+
+		if (process.exitValue() == 0) {
 			println ""
 			println "╔════════════════════════════════════════════════════════════╗"
 			println "║  ✅ GIT TAG CREATED                                        ║"
 			println "╚════════════════════════════════════════════════════════════╝"
-			println "  🏷️  Tag: ${tagName}"
-			println "  📝 Message: ${tagMsg}"
+			println "  📌 Tag: ${tagName}"
+			println "  📝 Message: Release ${project.mod_version}"
 			println ""
 			return true
 		} else {
-			def errorOutput = createProcess.errorStream?.text ?: ""
-			// Check if tag already exists
-			if (errorOutput.contains("already exists")) {
-				println "  ℹ️  Tag ${tagName} already exists (skipping)"
-				return true
-			}
-			println "  ⚠️  Failed to create tag: ${errorOutput}"
+			println "  ⚠️  Tag creation failed"
 			return false
 		}
 	} catch (Exception e) {
@@ -1742,7 +1895,6 @@ def createGitTag() {
 
 def pushToRemote() {
 	try {
-		// Get current branch
 		def branchProcess = "git rev-parse --abbrev-ref HEAD".execute()
 		branchProcess.waitFor()
 		def branch = branchProcess.text.trim()
@@ -1759,7 +1911,6 @@ def pushToRemote() {
 		println "  🌐 Branch: ${branch}"
 		println "  ⏳ Pushing commits..."
 
-		// Push commits
 		def pushProcess = "git push origin ${branch}".execute()
 		pushProcess.waitFor()
 
@@ -1772,7 +1923,6 @@ def pushToRemote() {
 		println "  ✅ Commits pushed successfully"
 		println "  ⏳ Pushing tags..."
 
-		// Push tags
 		def tagPushProcess = "git push origin --tags".execute()
 		tagPushProcess.waitFor()
 
@@ -1792,7 +1942,230 @@ def pushToRemote() {
 	}
 }
 
+def validateRelease() {
+	println ""
+	println "╔════════════════════════════════════════════════════════════╗"
+	println "║  🔍 VALIDATING RELEASE PREREQUISITES                       ║"
+	println "╚════════════════════════════════════════════════════════════╝"
+
+	def allChecks = []
+
+	// Check 1: Git is in valid state
+	try {
+		def statusProcess = "git status --short".execute()
+		statusProcess.waitFor()
+		def hasChanges = statusProcess.text.trim().size() > 0
+		def gitValid = statusProcess.exitValue() == 0
+
+		if (!gitValid) {
+			println "  ❌ Git Status: INVALID (not a git repo?)"
+			allChecks << false
+		} else if (hasChanges) {
+			println "  ⚠️  Git Status: HAS UNCOMMITTED CHANGES"
+			println "     These will be staged and committed."
+			allChecks << true
+		} else {
+			println "  ✅ Git Status: CLEAN"
+			allChecks << true
+		}
+	} catch (Exception e) {
+		println "  ❌ Git Status: ERROR - ${e.message}"
+		allChecks << false
+	}
+
+	// Check 2: Remote is accessible
+	try {
+		def remoteProcess = "git remote get-url origin".execute()
+		remoteProcess.waitFor()
+		if (remoteProcess.exitValue() == 0) {
+			def remote = remoteProcess.text.trim()
+			println "  ✅ Git Remote: ${remote}"
+
+			// Try to ping remote
+			def lsProcess = "git ls-remote origin".execute()
+			lsProcess.waitFor()
+			if (lsProcess.exitValue() == 0) {
+				println "  ✅ Remote Access: REACHABLE"
+				allChecks << true
+			} else {
+				println "  ⚠️  Remote Access: UNREACHABLE (will fail on push)"
+				allChecks << false
+			}
+		} else {
+			println "  ❌ Git Remote: NOT CONFIGURED"
+			allChecks << false
+		}
+	} catch (Exception e) {
+		println "  ⚠️  Remote Check: ERROR - ${e.message}"
+		allChecks << false
+	}
+
+	// Check 3: Current branch is valid
+	try {
+		def branchProcess = "git rev-parse --abbrev-ref HEAD".execute()
+		branchProcess.waitFor()
+		def branch = branchProcess.text.trim()
+		if (branchProcess.exitValue() == 0 && branch != "HEAD") {
+			println "  ✅ Current Branch: ${branch}"
+			allChecks << true
+		} else {
+			println "  ⚠️  Current Branch: DETACHED HEAD (risky)"
+			allChecks << false
+		}
+	} catch (Exception e) {
+		println "  ⚠️  Branch Check: ERROR"
+		allChecks << false
+	}
+
+	// Check 4: Version format
+	try {
+		def versionMatch = project.mod_version =~ /^\d+\.\d+\.\d+$/
+		if (versionMatch) {
+			println "  ✅ Version Format: ${project.mod_version} (valid)"
+			allChecks << true
+		} else {
+			println "  ❌ Version Format: ${project.mod_version} (invalid - should be X.Y.Z)"
+			allChecks << false
+		}
+	} catch (Exception e) {
+		println "  ❌ Version Check: ERROR"
+		allChecks << false
+	}
+
+	// Check 5: Java version
+	try {
+		def javaVersion = System.getProperty('java.version')
+		if (javaVersion.contains('21') || javaVersion.startsWith('21')) {
+			println "  ✅ Java Version: ${javaVersion}"
+			allChecks << true
+		} else {
+			println "  ⚠️  Java Version: ${javaVersion} (expected 21)"
+			allChecks << true // Warning only
+		}
+	} catch (Exception e) {
+		println "  ⚠️  Java Check: ERROR"
+		allChecks << true // Warning only
+	}
+
+	println ""
+	def passCount = allChecks.count { it == true }
+	def totalCount = allChecks.size()
+
+	if (allChecks.every { it == true }) {
+		println "╔════════════════════════════════════════════════════════════╗"
+		println "║  ✅ ALL VALIDATIONS PASSED (${passCount}/${totalCount})                         ║"
+		println "╚════════════════════════════════════════════════════════════╝"
+		println ""
+		return true
+	} else {
+		println "╔════════════════════════════════════════════════════════════╗"
+		println "║  ⚠️  SOME VALIDATIONS FAILED (${passCount}/${totalCount})                        ║"
+		println "╚════════════════════════════════════════════════════════════╝"
+		println "  Continue anyway? Review errors above carefully."
+		println ""
+		return false
+	}
+}
+
+def generateReleaseNotes() {
+	try {
+		def logsDir = file("logs")
+		if (!logsDir.exists()) logsDir.mkdirs()
+
+		// Get changelog file
+		def changelogPattern = ~/CHANGELOG-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.md/
+		def latestChangelog = logsDir.listFiles()?.findAll { it.name =~ changelogPattern }?.sort()?.reverse()?.first()
+
+		if (!latestChangelog) {
+			println "⚠️  No changelog found - skipping release notes"
+			return
+		}
+
+		def releaseNotesFile = new File(logsDir, "RELEASE-NOTES-v${project.mod_version}.md")
+		def changelogContent = latestChangelog.text
+
+		releaseNotesFile.withWriter('UTF-8') { w ->
+			w.writeLine("# Release v${project.mod_version}")
+			w.writeLine("")
+			w.writeLine("**Released**: ${new Date().format('MMMM d, yyyy')}")
+			w.writeLine("")
+			w.writeLine("## What's New")
+			w.writeLine("")
+
+			// Parse changelog for features and fixes
+			def features = []
+			def fixes = []
+			def commits = changelogContent.split('\n').findAll { it.startsWith('*') }
+
+			commits.each { commit ->
+				if (commit.contains('feat:') || commit.contains('feature:')) {
+					features << commit.replaceFirst(/^\* /, '')
+				} else if (commit.contains('fix:') || commit.contains('bugfix:')) {
+					fixes << commit.replaceFirst(/^\* /, '')
+				}
+			}
+
+			if (features) {
+				w.writeLine("### ✨ Features")
+				features.each { w.writeLine("- ${it}") }
+				w.writeLine("")
+			}
+
+			if (fixes) {
+				w.writeLine("### 🐛 Bug Fixes")
+				fixes.each { w.writeLine("- ${it}") }
+				w.writeLine("")
+			}
+
+			w.writeLine("### 📋 Full Changelog")
+			w.writeLine("")
+			w.writeLine(changelogContent)
+			w.writeLine("")
+			w.writeLine("---")
+			w.writeLine("Generated by KimDog's Automated Release System")
+		}
+
+		println ""
+		println "╔════════════════════════════════════════════════════════════╗"
+		println "║  ✅ RELEASE NOTES GENERATED                                ║"
+		println "╚════════════════════════════════════════════════════════════╝"
+		println "  📝 File: RELEASE-NOTES-v${project.mod_version}.md"
+		println "  📍 Location: logs/"
+		println ""
+	} catch (Exception e) {
+		println "⚠️  Release notes generation failed: ${e.message}"
+	}
+}
+
 // Automatically detect version bump type from git commits
+// Helper: Bump version and return new version with suffix
+def bumpVersion(String mode) {
+	def propsFile = file("gradle.properties")
+	def props = propsFile.text
+	def oldVersion = project.mod_version
+
+	// Remove suffix if exists
+	def baseParts = oldVersion.replaceAll(/-.*$/, '').tokenize('.')*.toInteger()
+	while (baseParts.size() < 3) baseParts << 0
+
+	switch (mode) {
+		case 'major': baseParts[0]++; baseParts[1] = 0; baseParts[2] = 0; break
+		case 'minor': baseParts[1]++; baseParts[2] = 0; break
+		default: baseParts[2]++; break
+	}
+
+	def newVersion = baseParts.join('.') + "-${mode}"
+	return [props, propsFile, newVersion]
+}
+
+// Helper: Write version to gradle.properties
+def writeVersion(String props, File propsFile, String newVersion) {
+	def updated = props.replaceAll(/mod_version\s*=\s*.*/, "mod_version=${newVersion}")
+	propsFile.text = updated
+	project.mod_version = newVersion
+	version = newVersion
+}
+
 def detectVersionBumpType() {
 	try {
 		// Get all commits since last tag or from the start
@@ -2025,96 +2398,3 @@ tasks.register('showVersionInfo') {
 	}
 }
 
-// Cache utilities
-tasks.register('cacheInfo') {
-	group = 'build'
-	description = 'Show cache usage (gradle + loom cache)'
-	doLast {
-		println ""
-		println "╔════════════════════════════════════════════════════════════╗"
-		println "║  CACHE STATUS                                             ║"
-		println "╚════════════════════════════════════════════════════════════╝"
-		def gradleMB = gradleLocalCacheDir.directorySize() / 1024 / 1024
-		def loomDir = file('.gradle/loom-cache')
-		def loomMB = loomDir.exists() ? loomDir.directorySize() / 1024 / 1024 : 0
-		println "  • Gradle local cache: ${String.format('%.2f', gradleMB)} MB (${gradleLocalCacheDir})"
-		println "  • Loom cache:         ${String.format('%.2f', loomMB)} MB (${loomDir})"
-		logToFile("Cache status - Gradle: ${gradleMB} MB, Loom: ${loomMB} MB")
-	}
-}
-
- tasks.register('cleanCache') {
-	group = 'build'
-	description = 'Clean local cache directory (cache/gradle) and loom cache'
-	doLast {
-		delete gradleLocalCacheDir
-		delete '.gradle/loom-cache'
-		gradleLocalCacheDir.mkdirs()
-		println "✓ Caches cleared"
-		logToFile("✓ Caches cleared (gradle + loom)")
-	}
-}
-
-// Warm cache by compiling only (skipping jar)
-tasks.register('warmCache') {
-	group = 'build'
-	description = 'Warm gradle/loom caches without packaging'
-	dependsOn 'classes'
-	doLast {
-		println "✓ Cache warmed via class compilation"
-		logToFile("✓ Cache warmed via classes task")
-	}
-}
-
-// Remind users in fullHelp
-tasks.named('fullHelp') {
-	doLast {
-		println ""
-		println "╔════════════════════════════════════════════════════════════╗"
-		println "║  COMPREHENSIVE BUILD SYSTEM DOCUMENTATION                 ║"
-		println "╚════════════════════════════════════════════════════════════╝"
-		println ""
-		println "🚀 QUICK START:"
-		println "     gradle build              - Standard build"
-		println "     gradle runClient          - Run game client"
-		println "     gradle runServer          - Run game server"
-		println ""
-		println "📦 BUILD TASKS:"
-		println "     gradle build              - Full build with datagen"
-		println "     gradle quickBuild         - Fast incremental build"
-		println "     gradle clean              - Clean build artifacts"
-		println "     gradle deepClean          - Clean everything (including cache)"
-		println ""
-		println "🔧 DATAGEN:"
-		println "     gradle runDatagen         - Run datagen manually"
-		println "     gradle build              - Auto-runs datagen (enabled by default)"
-		println "     -PautoDatagen=false       - Disable auto datagen"
-		println ""
-		println "📊 ANALYSIS & VERIFICATION:"
-		println "     gradle buildInfo          - Show build configuration"
-		println "     gradle versionInfo        - Show version & git info"
-		println "     gradle dependencyInfo     - Show all dependencies"
-		println "     gradle buildAnalytics     - Show build statistics"
-		println "     gradle verifyBuild        - Verify build integrity"
-		println "     gradle validateEnvironment- Validate build environment"
-		println "     gradle profileBuild       - Performance profiling tips"
-		println ""
-		println "📋 LOGGING & REPORTING:"
-		println "     gradle viewLog            - View latest build log"
-		println "     gradle cleanLogs          - Clean old logs (keeps 10)"
-		println "     gradle buildReport        - Generate build report"
-		println "     gradle archiveBuilds      - Backup build artifacts"
-		println ""
-		println "💡 USEFUL FLAGS:"
-		println "     gradle build --profile    - Profile build performance"
-		println "     gradle build --parallel   - Use parallel compilation"
-		println "     gradle build --build-cache- Use build cache"
-		println "     gradle -x test            - Skip tests"
-		println ""
-		println "🆘 HELP:"
-		println "     gradle fullHelp           - Show this message"
-		println "     gradle showTasks          - Show custom tasks only"
-		println "     gradle tasks              - Show all Gradle tasks"
-		println ""
-	}
-}
