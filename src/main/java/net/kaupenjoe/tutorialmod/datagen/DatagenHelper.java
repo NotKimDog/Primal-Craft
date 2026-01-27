@@ -48,6 +48,16 @@ public class DatagenHelper {
         ALL_SUFFIXES.addAll(Arrays.asList(BLOCK_SUFFIXES));
     }
 
+    // ===== CENTRALIZED MATERIAL SUFFIXES =====
+    public static class MaterialSuffixes {
+        public static final String[] ALL_SUFFIXES = {
+            "_sword", "_pickaxe", "_shovel", "_axe", "_hoe", "_hammer",
+            "_helmet", "_chestplate", "_leggings", "_boots",
+            "_block", "_ore", "_stairs", "_slab", "_wall", "_fence", "_door",
+            "_trapdoor", "_button", "_pressure_plate"
+        };
+    }
+
     /**
      * Get all registered items with their names (cached)
      */
@@ -76,6 +86,40 @@ public class DatagenHelper {
             cachedBlocks = Collections.unmodifiableList(blocks);
             return cachedBlocks;
         }
+    }
+
+    /**
+     * Generic reflection scanner - eliminates code duplication
+     */
+    private static <T> List<String[]> scanGeneric(Class<?> modClass, Class<T> typeClass) {
+        List<String[]> results = new ArrayList<>();
+
+        try {
+            Field[] fields = modClass.getDeclaredFields();
+            for (Field field : fields) {
+                // Optimize: check modifiers first (fastest)
+                int mods = field.getModifiers();
+                if ((mods & (Modifier.PUBLIC | Modifier.STATIC | Modifier.FINAL)) !=
+                    (Modifier.PUBLIC | Modifier.STATIC | Modifier.FINAL)) {
+                    continue;
+                }
+
+                // Then check type
+                if (!typeClass.isAssignableFrom(field.getType())) {
+                    continue;
+                }
+
+                // Finally get value
+                field.setAccessible(true);
+                Object value = field.get(null);
+                String name = field.getName().toLowerCase();
+                results.add(new String[]{name, String.valueOf(System.identityHashCode(value))});
+            }
+        } catch (Exception e) {
+            TutorialMod.LOGGER.error("Failed to scan {} for {}: {}", modClass.getSimpleName(), typeClass.getSimpleName(), e.getMessage());
+        }
+
+        return results;
     }
 
     /**
@@ -149,7 +193,7 @@ public class DatagenHelper {
     // ===== ITEM FILTERING METHODS =====
 
     /**
-     * Filter items by keywords (cached)
+     * Filter items by keywords (cached) - UNIFIED METHOD
      */
     public static List<ItemEntry> getItemsContaining(String... keywords) {
         String cacheKey = String.join("|", keywords);
@@ -160,107 +204,39 @@ public class DatagenHelper {
         );
     }
 
-    public static List<ItemEntry> getSwords() {
-        return getFromCache("sword", true);
-    }
-
-    public static List<ItemEntry> getPickaxes() {
-        // Exclude hammers from pickaxes
-        return getAllItems().stream()
-            .filter(e -> e.name().contains("pickaxe") && !e.name().contains("hammer"))
-            .collect(Collectors.toUnmodifiableList());
-    }
-
-    public static List<ItemEntry> getHammers() {
-        return getFromCache("hammer", true);
-    }
-
-    public static List<ItemEntry> getShovels() {
-        return getFromCache("shovel", true);
-    }
-
-    public static List<ItemEntry> getAxes() {
-        return getFromCache("axe", true);
-    }
-
-    public static List<ItemEntry> getHoes() {
-        return getFromCache("hoe", true);
-    }
-
-    public static List<ItemEntry> getHelmets() {
-        return getFromCache("helmet", true);
-    }
-
-    public static List<ItemEntry> getChestplates() {
-        return getFromCache("chestplate", true);
-    }
-
-    public static List<ItemEntry> getLeggings() {
-        return getAllItems().stream()
-            .filter(e -> e.name().contains("legging") || e.name().contains("bottoms"))
-            .collect(Collectors.toUnmodifiableList());
-    }
-
-    public static List<ItemEntry> getBoots() {
-        return getFromCache("boots", true);
-    }
-
     /**
-     * Get all tools (optimized)
+     * Filter items by keywords with exclusions (cached) - UNIFIED METHOD
      */
-    public static List<ItemEntry> getTools() {
-        return getAllItems().stream()
-            .filter(e -> {
-                String name = e.name();
-                return name.contains("sword") || name.contains("pickaxe") || name.contains("shovel") ||
-                       name.contains("axe") || name.contains("hoe") || name.contains("hammer");
-            })
-            .collect(Collectors.toUnmodifiableList());
-    }
-
-    /**
-     * Get all armor pieces
-     */
-    public static List<ItemEntry> getArmor() {
-        return getAllItems().stream()
-            .filter(e -> {
-                String name = e.name();
-                return name.contains("helmet") || name.contains("chestplate") ||
-                       name.contains("legging") || name.contains("boots");
-            })
-            .collect(Collectors.toUnmodifiableList());
-    }
-
-    /**
-     * Get trimmable armor (excludes pajamas)
-     */
-    public static List<ItemEntry> getTrimmableArmor() {
-        return getArmor().stream()
-            .filter(entry -> !entry.name().contains("pajama"))
-            .collect(Collectors.toUnmodifiableList());
-    }
-
-    /**
-     * Helper method for cached single-keyword filtering
-     */
-    private static List<ItemEntry> getFromCache(String keyword, boolean cached) {
-        if (!cached) {
-            return getAllItems().stream()
-                .filter(e -> e.name().contains(keyword))
-                .collect(Collectors.toUnmodifiableList());
-        }
-
-        return itemCategoryCache.computeIfAbsent(keyword, key ->
+    public static List<ItemEntry> getItemsMatching(String[] exclusions, String... inclusions) {
+        String cacheKey = "items_" + String.join("|", inclusions) +
+            (exclusions != null ? "_ex_" + String.join("|", exclusions) : "");
+        return itemCategoryCache.computeIfAbsent(cacheKey, key ->
             getAllItems().stream()
-                .filter(e -> e.name().contains(key))
+                .filter(e -> containsAny(e.name(), inclusions))
+                .filter(e -> exclusions == null || !containsAny(e.name(), exclusions))
                 .collect(Collectors.toUnmodifiableList())
         );
     }
 
+    // ===== AUTO-GENERATED CONVENIENCE METHODS (via unified getItemsMatching) =====
+    public static List<ItemEntry> getSwords() { return getItemsContaining("sword"); }
+    public static List<ItemEntry> getPickaxes() { return getItemsMatching(new String[]{"hammer"}, "pickaxe"); }
+    public static List<ItemEntry> getHammers() { return getItemsContaining("hammer"); }
+    public static List<ItemEntry> getShovels() { return getItemsContaining("shovel"); }
+    public static List<ItemEntry> getAxes() { return getItemsContaining("axe"); }
+    public static List<ItemEntry> getHoes() { return getItemsContaining("hoe"); }
+    public static List<ItemEntry> getHelmets() { return getItemsContaining("helmet"); }
+    public static List<ItemEntry> getChestplates() { return getItemsContaining("chestplate"); }
+    public static List<ItemEntry> getLeggings() { return getItemsContaining("legging", "bottoms"); }
+    public static List<ItemEntry> getBoots() { return getItemsContaining("boots"); }
+    public static List<ItemEntry> getTools() { return getItemsContaining("sword", "pickaxe", "shovel", "axe", "hoe", "hammer"); }
+    public static List<ItemEntry> getArmor() { return getItemsContaining("helmet", "chestplate", "legging", "boots"); }
+    public static List<ItemEntry> getTrimmableArmor() { return getItemsMatching(new String[]{"pajama"}, "helmet", "chestplate", "legging", "boots"); }
+
     // ===== BLOCK FILTERING METHODS =====
 
     /**
-     * Filter blocks by keywords (cached)
+     * Filter blocks by keywords (cached) - UNIFIED METHOD
      */
     public static List<BlockEntry> getBlocksContaining(String... keywords) {
         String cacheKey = "blocks_" + String.join("|", keywords);
@@ -271,63 +247,32 @@ public class DatagenHelper {
         );
     }
 
-    public static List<BlockEntry> getOres() {
-        return getFromBlockCache("_ore");
-    }
-
-    public static List<BlockEntry> getStairs() {
-        return getFromBlockCache("stairs");
-    }
-
-    public static List<BlockEntry> getSlabs() {
-        return getFromBlockCache("slab");
-    }
-
-    public static List<BlockEntry> getFences() {
-        return getFromBlockCache("fence");
-    }
-
-    public static List<BlockEntry> getWalls() {
-        return getFromBlockCache("wall");
-    }
-
-    public static List<BlockEntry> getDoors() {
-        return getFromBlockCache("door");
-    }
-
-    public static List<BlockEntry> getTrapdoors() {
-        return getFromBlockCache("trapdoor");
-    }
-
-    public static List<BlockEntry> getButtons() {
-        return getFromBlockCache("button");
-    }
-
-    public static List<BlockEntry> getPressurePlates() {
-        return getFromBlockCache("pressure_plate");
-    }
-
-    public static List<BlockEntry> getLogs() {
-        return getAllBlocks().stream()
-            .filter(e -> e.name().contains("log") || e.name().contains("wood"))
-            .collect(Collectors.toUnmodifiableList());
-    }
-
-    public static List<BlockEntry> getPlanks() {
-        return getFromBlockCache("planks");
-    }
-
     /**
-     * Helper method for cached single-keyword block filtering
+     * Filter blocks by keywords with exclusions (cached) - UNIFIED METHOD
      */
-    private static List<BlockEntry> getFromBlockCache(String keyword) {
-        String cacheKey = "block_" + keyword;
+    public static List<BlockEntry> getBlocksMatching(String[] exclusions, String... inclusions) {
+        String cacheKey = "blocks_" + String.join("|", inclusions) +
+            (exclusions != null ? "_ex_" + String.join("|", exclusions) : "");
         return blockCategoryCache.computeIfAbsent(cacheKey, key ->
             getAllBlocks().stream()
-                .filter(e -> e.name().contains(keyword))
+                .filter(e -> containsAny(e.name(), inclusions))
+                .filter(e -> exclusions == null || !containsAny(e.name(), exclusions))
                 .collect(Collectors.toUnmodifiableList())
         );
     }
+
+    // ===== AUTO-GENERATED CONVENIENCE METHODS (via unified getBlocksMatching) =====
+    public static List<BlockEntry> getOres() { return getBlocksContaining("ore"); }
+    public static List<BlockEntry> getStairs() { return getBlocksContaining("stairs"); }
+    public static List<BlockEntry> getSlabs() { return getBlocksContaining("slab"); }
+    public static List<BlockEntry> getFences() { return getBlocksContaining("fence"); }
+    public static List<BlockEntry> getWalls() { return getBlocksContaining("wall"); }
+    public static List<BlockEntry> getDoors() { return getBlocksContaining("door"); }
+    public static List<BlockEntry> getTrapdoors() { return getBlocksContaining("trapdoor"); }
+    public static List<BlockEntry> getButtons() { return getBlocksContaining("button"); }
+    public static List<BlockEntry> getPressurePlates() { return getBlocksContaining("pressure_plate"); }
+    public static List<BlockEntry> getLogs() { return getBlocksContaining("log", "wood"); }
+    public static List<BlockEntry> getPlanks() { return getBlocksContaining("planks"); }
 
     // ===== UTILITY METHODS =====
 
@@ -335,13 +280,8 @@ public class DatagenHelper {
      * Get material name from item/block name (e.g., "pink_garnet_sword" -> "pink_garnet")
      */
     public static String getMaterialName(String fullName) {
-        // Remove common suffixes
-        String[] suffixes = {"_sword", "_pickaxe", "_shovel", "_axe", "_hoe", "_hammer",
-                            "_helmet", "_chestplate", "_leggings", "_boots",
-                            "_block", "_ore", "_stairs", "_slab", "_wall", "_fence", "_door",
-                            "_trapdoor", "_button", "_pressure_plate"};
-
-        for (String suffix : suffixes) {
+        // Use central suffix list from configuration
+        for (String suffix : MaterialSuffixes.ALL_SUFFIXES) {
             if (fullName.endsWith(suffix)) {
                 return fullName.substring(0, fullName.length() - suffix.length());
             }
@@ -372,29 +312,24 @@ public class DatagenHelper {
     }
 
     /**
-     * Check if item is a tool/armor that should have recipes
+     * Check if item is a specific type using configuration
      */
     public static boolean isCraftable(String name) {
-        return name.contains("sword") || name.contains("pickaxe") || name.contains("shovel") ||
-               name.contains("axe") || name.contains("hoe") || name.contains("hammer") ||
-               name.contains("helmet") || name.contains("chestplate") ||
-               name.contains("leggings") || name.contains("boots");
+        return isTool(name) || isArmor(name);
     }
 
     /**
      * Check if item is a tool
      */
     public static boolean isTool(String name) {
-        return name.contains("sword") || name.contains("pickaxe") || name.contains("shovel") ||
-               name.contains("axe") || name.contains("hoe") || name.contains("hammer");
+        return containsAny(name, "sword", "pickaxe", "shovel", "axe", "hoe", "hammer");
     }
 
     /**
      * Check if item is armor
      */
     public static boolean isArmor(String name) {
-        return name.contains("helmet") || name.contains("chestplate") ||
-               name.contains("leggings") || name.contains("boots");
+        return containsAny(name, "helmet", "chestplate", "legging", "boots");
     }
 
     /**
@@ -483,37 +418,29 @@ public class DatagenHelper {
      * Get tags for a specific block
      */
     public static List<String> getBlockTags(String blockName) {
-        List<String> tags = new ArrayList<>();
-
-        for (Map.Entry<String, List<String>> tagEntry : TagConfig.BLOCK_TAG_KEYWORDS.entrySet()) {
-            String tagName = tagEntry.getKey();
-            List<String> keywords = tagEntry.getValue();
-            List<String> exclusions = TagConfig.TAG_EXCLUSIONS.getOrDefault(tagName, List.of());
-
-            boolean hasKeyword = keywords.stream().anyMatch(k -> blockName.contains(k));
-            boolean hasExclusion = exclusions.stream().anyMatch(e -> blockName.contains(e));
-
-            if (hasKeyword && !hasExclusion) {
-                tags.add(tagName);
-            }
-        }
-
-        return tags;
+        return getTagsForName(blockName, TagConfig.BLOCK_TAG_KEYWORDS, TagConfig.TAG_EXCLUSIONS);
     }
 
     /**
      * Get tags for a specific item
      */
     public static List<String> getItemTags(String itemName) {
+        return getTagsForName(itemName, TagConfig.ITEM_TAG_KEYWORDS, TagConfig.TAG_EXCLUSIONS);
+    }
+
+    /**
+     * Generic tag matching logic (no duplication)
+     */
+    private static List<String> getTagsForName(String name, Map<String, List<String>> tagKeywords, Map<String, List<String>> tagExclusions) {
         List<String> tags = new ArrayList<>();
 
-        for (Map.Entry<String, List<String>> tagEntry : TagConfig.ITEM_TAG_KEYWORDS.entrySet()) {
+        for (Map.Entry<String, List<String>> tagEntry : tagKeywords.entrySet()) {
             String tagName = tagEntry.getKey();
             List<String> keywords = tagEntry.getValue();
-            List<String> exclusions = TagConfig.TAG_EXCLUSIONS.getOrDefault(tagName, List.of());
+            List<String> exclusions = tagExclusions.getOrDefault(tagName, List.of());
 
-            boolean hasKeyword = keywords.stream().anyMatch(k -> itemName.contains(k));
-            boolean hasExclusion = exclusions.stream().anyMatch(e -> itemName.contains(e));
+            boolean hasKeyword = keywords.stream().anyMatch(k -> name.contains(k));
+            boolean hasExclusion = exclusions.stream().anyMatch(e -> name.contains(e));
 
             if (hasKeyword && !hasExclusion) {
                 tags.add(tagName);
