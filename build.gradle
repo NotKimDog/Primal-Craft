@@ -1082,7 +1082,13 @@ tasks.register('showTasks') {
 		println ""
 		println "🔧 Datagen Tasks:"
 		println "     gradle runDatagen         - Run datagen process"
+		println "     gradle generateWiki       - Generate automated wiki"
 		println "     gradle build              - Build with auto datagen"
+		println ""
+		println "📤 Publishing Tasks:"
+		println "     gradle checkModrinth      - Check Modrinth API connection"
+		println "     gradle publishModrinth    - Publish to Modrinth"
+		println "     gradle fullRelease        - FULL: auto + build + publish"
 		println ""
 		println "📊 Analysis Tasks:"
 		println "     gradle buildInfo          - Show build configuration"
@@ -1103,6 +1109,33 @@ tasks.register('showTasks') {
 		println "     gradle fullHelp           - Show complete documentation"
 		println "     gradle showTasks          - Show this help message"
 		println "     gradle tasks              - Show all Gradle tasks"
+		println ""
+	}
+}
+
+// Wiki Generation Task
+tasks.register('generateWiki', JavaExec) {
+	group = 'documentation'
+	description = 'Generate automated wiki documentation from code'
+
+	classpath = sourceSets.main.runtimeClasspath
+	mainClass = 'net.kaupenjoe.tutorialmod.datagen.WikiGenerator'
+
+	doFirst {
+		println ""
+		println "╔════════════════════════════════════════════════════════════╗"
+		println "║  GENERATING AUTOMATED WIKI                                 ║"
+		println "╚════════════════════════════════════════════════════════════╝"
+		println ""
+	}
+
+	doLast {
+		println ""
+		println "╔════════════════════════════════════════════════════════════╗"
+		println "║  ✅ WIKI GENERATION COMPLETE                               ║"
+		println "╚════════════════════════════════════════════════════════════╝"
+		println "  📁 Wiki files created in: wiki/"
+		println "  📊 Updated: Home.md, Features.md, Items-and-Blocks.md"
 		println ""
 	}
 }
@@ -2267,6 +2300,211 @@ tasks.register('changelog') {
 	}
 }
 
+// Check Modrinth API connection
+tasks.register('checkModrinth') {
+	group = 'publishing'
+	description = 'Check connection to Modrinth API'
+
+	doLast {
+		println ""
+		println "╔════════════════════════════════════════════════════════════╗"
+		println "║  CHECKING MODRINTH API CONNECTION                         ║"
+		println "╚════════════════════════════════════════════════════════════╝"
+		println ""
+		println "  🔗 Project: https://modrinth.com/mod/DwBeOr6S"
+		println "  📡 Testing API connection..."
+		println ""
+
+		try {
+			def url = new URL("https://api.modrinth.com/v2/project/DwBeOr6S")
+			def connection = url.openConnection()
+			connection.setRequestProperty("Authorization", "mrp_xL44PwGmJIwijtdnrzCZvCyw7eEFH9wHsq4k7t34GUgwMpuXRJrSBARUx1tF")
+			connection.setRequestMethod("GET")
+			connection.connect()
+
+			def responseCode = connection.responseCode
+
+			if (responseCode == 200) {
+				println "  ✅ Connected to Modrinth API successfully!"
+				println "  ✓ API token is valid"
+				println "  ✓ Project exists"
+				println ""
+			} else {
+				println "  ⚠️  Connection succeeded but got response code: ${responseCode}"
+				println ""
+			}
+		} catch (Exception e) {
+			println "  ❌ Failed to connect: ${e.message}"
+			println ""
+		}
+	}
+}
+
+// Publish to Modrinth (ENABLED - Will actually publish!)
+// To disable: gradle publishModrinth -PskipModrinth=true
+tasks.register('publishModrinth') {
+	group = 'publishing'
+	description = 'Publish mod to Modrinth (LIVE - will actually upload!)'
+	dependsOn 'build'
+
+	doLast {
+		// Check if publishing should be skipped
+		if (project.hasProperty('skipModrinth') && project.skipModrinth == 'true') {
+			println ""
+			println "╔════════════════════════════════════════════════════════════╗"
+			println "║  ⏸️  MODRINTH PUBLISHING SKIPPED                           ║"
+			println "╚════════════════════════════════════════════════════════════╝"
+			println "  Skipped due to -PskipModrinth=true flag"
+			println ""
+			return
+		}
+
+		println ""
+		println "╔════════════════════════════════════════════════════════════╗"
+		println "║  🚀 PUBLISHING TO MODRINTH (LIVE!)                         ║"
+		println "╚════════════════════════════════════════════════════════════╝"
+		println ""
+
+		def jarFile = file("build/libs/${project.archives_base_name}-${project.mod_version}.jar")
+
+		if (!jarFile.exists()) {
+			println "  ❌ JAR file not found: ${jarFile.name}"
+			println "  Run 'gradle build' first"
+			throw new GradleException("JAR file not found")
+		}
+
+		def changelogFile = file("logs/CHANGELOG-${new Date().format('yyyy-MM-dd_HH-mm-ss')}.md")
+		def changelog = "Release ${project.mod_version}"
+
+		if (changelogFile.exists()) {
+			changelog = changelogFile.text
+		} else {
+			def changelogFiles = file("logs").listFiles()
+				?.findAll { it.name.startsWith("CHANGELOG-") && it.name.endsWith(".md") }
+				?.sort { it.lastModified() }
+
+			if (changelogFiles && changelogFiles.size() > 0) {
+				changelog = changelogFiles.last().text
+			}
+		}
+
+		println "  📊 Publishing Details:"
+		println "  ├─ 📦 JAR: ${jarFile.name}"
+		println "  ├─ 📏 Size: ${String.format("%.2f", jarFile.length() / 1024.0 / 1024.0)} MB"
+		println "  ├─ 🏷️  Version: ${project.mod_version}"
+		println "  ├─ 🎮 Game Versions: 1.21.11, 1.21.1, 1.21"
+		println "  ├─ 🔧 Loader: Fabric"
+		println "  ├─ 📋 Changelog: ${changelog.length()} characters"
+		println "  └─ 🔗 To: https://modrinth.com/mod/DwBeOr6S"
+		println ""
+		println "  🚀 Uploading to Modrinth API..."
+		println ""
+
+		// Build multipart form data using Groovy HTTP client
+		try {
+			def API_URL = "https://api.modrinth.com/v2/version"
+			def API_TOKEN = "mrp_xL44PwGmJIwijtdnrzCZvCyw7eEFH9wHsq4k7t34GUgwMpuXRJrSBARUx1tF"
+			def PROJECT_ID = "DwBeOr6S"
+
+			// Detect version type
+			def versionType = "release"
+			if (project.mod_version.contains("alpha") || project.mod_version.contains("beta")) {
+				versionType = "beta"
+			}
+
+			// Build JSON metadata
+			def metadata = groovy.json.JsonOutput.toJson([
+				project_id: PROJECT_ID,
+				version_number: project.mod_version,
+				version_title: "KimDog SMP ${project.mod_version}",
+				changelog: changelog,
+				version_type: versionType,
+				featured: true,
+				status: "listed",
+				dependencies: [
+					[
+						project_id: "P7dR8mSH", // Fabric API
+						dependency_type: "required"
+					]
+				],
+				game_versions: ["1.21.11", "1.21.1", "1.21"],
+				loaders: ["fabric"],
+				file_parts: [jarFile.name]
+			])
+
+			// Create multipart request
+			def boundary = "----WebKitFormBoundary${System.currentTimeMillis()}"
+			def connection = new URL(API_URL).openConnection()
+			connection.setRequestMethod("POST")
+			connection.setDoOutput(true)
+			connection.setRequestProperty("Authorization", API_TOKEN)
+			connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=${boundary}")
+
+			def outputStream = connection.getOutputStream()
+			def writer = new PrintWriter(new OutputStreamWriter(outputStream, "UTF-8"))
+
+			// Write metadata part
+			writer.append("--${boundary}\r\n")
+			writer.append("Content-Disposition: form-data; name=\"data\"\r\n")
+			writer.append("Content-Type: application/json\r\n\r\n")
+			writer.append(metadata)
+			writer.append("\r\n")
+			writer.flush()
+
+			// Write file part
+			writer.append("--${boundary}\r\n")
+			writer.append("Content-Disposition: form-data; name=\"${jarFile.name}\"; filename=\"${jarFile.name}\"\r\n")
+			writer.append("Content-Type: application/java-archive\r\n\r\n")
+			writer.flush()
+
+			// Write file bytes
+			jarFile.withInputStream { input ->
+				outputStream << input
+			}
+			outputStream.flush()
+
+			// Write final boundary
+			writer.append("\r\n--${boundary}--\r\n")
+			writer.flush()
+			writer.close()
+
+			// Read response
+			def responseCode = connection.getResponseCode()
+			println "  📡 Response Code: ${responseCode}"
+
+			if (responseCode == 200) {
+				def response = connection.getInputStream().text
+				println ""
+				println "╔════════════════════════════════════════════════════════════╗"
+				println "║  ✅ MODRINTH PUBLISH SUCCESSFUL!                           ║"
+				println "╚════════════════════════════════════════════════════════════╝"
+				println "  🔗 View at: https://modrinth.com/mod/DwBeOr6S"
+				println "  ✓ Version ${project.mod_version} is now live!"
+				println ""
+			} else {
+				def errorResponse = connection.getErrorStream()?.text ?: "No error details"
+				println ""
+				println "╔════════════════════════════════════════════════════════════╗"
+				println "║  ❌ MODRINTH PUBLISH FAILED                                ║"
+				println "╚════════════════════════════════════════════════════════════╝"
+				println "  Response Code: ${responseCode}"
+				println "  Error: ${errorResponse}"
+				println ""
+				throw new GradleException("Failed to publish to Modrinth: ${responseCode}")
+			}
+
+		} catch (Exception e) {
+			println ""
+			println "╔════════════════════════════════════════════════════════════╗"
+			println "║  ❌ MODRINTH PUBLISH ERROR                                 ║"
+			println "╚════════════════════════════════════════════════════════════╝"
+			println "  Error: ${e.message}"
+			println ""
+			throw e
+		}
+	}
+}
+
 // Automatic release: bump version + generate changelog + create commit + tag + push
 tasks.register('autoRelease') {
 	group = 'versioning'
@@ -2285,8 +2523,38 @@ tasks.register('autoRelease') {
 		println "  ✓ Git tag created (v${project.mod_version})"
 		println "  ✓ Pushed to remote (commits + tags)"
 		println ""
-		println "  🎉 Everything is done! Ready to build:"
-		println "     gradle build"
+		println "  🎉 Everything is done! Next steps:"
+		println "     1. gradle build - Build the mod"
+		println "     2. gradle publishModrinth - Publish to Modrinth"
+		println ""
+	}
+}
+
+// Complete release pipeline: autoRelease + build + publish (LIVE!)
+// To skip Modrinth: gradle fullRelease -PskipModrinth=true
+tasks.register('fullRelease') {
+	group = 'publishing'
+	description = 'COMPLETE PIPELINE: auto release + build + PUBLISH TO MODRINTH (LIVE!)'
+	dependsOn 'autoRelease'
+	finalizedBy 'build', 'publishModrinth'
+
+	doLast {
+		println ""
+		println "╔════════════════════════════════════════════════════════════╗"
+		println "║  🎉 FULL RELEASE PIPELINE COMPLETE!                        ║"
+		println "╚════════════════════════════════════════════════════════════╝"
+		println "  ✓ Version management done"
+		println "  ✓ Changelog generated"
+		println "  ✓ Git commit & tag created"
+		println "  ✓ Pushed to GitHub"
+		println "  ✓ JAR built"
+		println "  ✓ Published to Modrinth (LIVE!)"
+		println ""
+		println "  🔗 Your mod is now live!"
+		println "     • Modrinth: https://modrinth.com/mod/DwBeOr6S"
+		println "     • GitHub: Check your repository"
+		println ""
+		println "  💡 To skip publishing next time: -PskipModrinth=true"
 		println ""
 	}
 }

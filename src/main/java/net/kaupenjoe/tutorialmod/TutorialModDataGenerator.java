@@ -93,6 +93,15 @@ public class TutorialModDataGenerator implements DataGeneratorEntrypoint {
 			TutorialMod.LOGGER.error("  ✗ Failed to register: Registry Data - {}", e.getMessage(), e);
 		}
 
+		// Generate automated wiki documentation
+		try {
+			TutorialMod.LOGGER.info("  📚 Generating automated wiki...");
+			WikiGenerator.generateWiki();
+			TutorialMod.LOGGER.info("  ✓ Wiki generation complete");
+		} catch (Exception e) {
+			TutorialMod.LOGGER.error("  ✗ Failed to generate wiki - {}", e.getMessage(), e);
+		}
+
 		long elapsed = System.currentTimeMillis() - startTime;
 		int failCount = totalProviders - successCount;
 
