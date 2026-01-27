@@ -6,8 +6,7 @@ import net.kaupenjoe.tutorialmod.TutorialMod;
 import net.kaupenjoe.tutorialmod.block.ModBlocks;
 import net.kaupenjoe.tutorialmod.item.ModItems;
 import net.kaupenjoe.tutorialmod.trim.ModTrimPatterns;
-import net.minecraft.data.recipe.RecipeExporter;
-import net.minecraft.data.recipe.RecipeGenerator;
+import net.minecraft.data.recipe.*;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemConvertible;
 import net.minecraft.item.Items;
@@ -17,9 +16,7 @@ import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.util.Identifier;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.block.Blocks;
 
@@ -35,9 +32,6 @@ public class ModRecipeProvider extends FabricRecipeProvider {
             public void generate() {
                 long startTime = System.currentTimeMillis();
                 TutorialMod.LOGGER.info("Starting automated recipe generation...");
-
-                // Initialize the advanced recipe builder for cleaner code
-                AdvancedRecipeBuilder builder = new AdvancedRecipeBuilder(exporter, this);
 
                 // ===== AUTO-DETECT ORES AND CREATE SMELTING RECIPES =====
                 for (var oreEntry : DatagenHelper.getOres()) {
@@ -56,48 +50,43 @@ public class ModRecipeProvider extends FabricRecipeProvider {
                     .toList();
                 Ingredient STICKS = Ingredient.ofItems(allSticks.toArray(new Item[0]));
 
-                // ===== AUTO-GENERATE TOOL RECIPES (Using Advanced Builder) =====
-                builder.batchAddToolRecipes("sword", DatagenHelper.getSwords(), STICKS, "obsidian");
-                builder.batchAddToolRecipes("pickaxe", DatagenHelper.getPickaxes(), STICKS, null);
-                builder.batchAddToolRecipes("shovel", DatagenHelper.getShovels(), STICKS, null);
-                builder.batchAddToolRecipes("axe", DatagenHelper.getAxes(), STICKS, "obsidian");
-                builder.batchAddToolRecipes("hoe", DatagenHelper.getHoes(), STICKS, null);
+                // ===== AUTO-GENERATE TOOL RECIPES =====
+                generateToolRecipes("sword", DatagenHelper.getSwords(), STICKS, "obsidian");
+                generateToolRecipes("pickaxe", DatagenHelper.getPickaxes(), STICKS, null);
+                generateToolRecipes("shovel", DatagenHelper.getShovels(), STICKS, null);
+                generateToolRecipes("axe", DatagenHelper.getAxes(), STICKS, "obsidian");
+                generateToolRecipes("hoe", DatagenHelper.getHoes(), STICKS, null);
 
-                // ===== AUTO-GENERATE ARMOR RECIPES (Using Advanced Builder) =====
-                builder.batchAddArmorRecipes("helmet", DatagenHelper.getHelmets(), null);
-                builder.batchAddArmorRecipes("chestplate", DatagenHelper.getChestplates(), "pajama");
-                builder.batchAddArmorRecipes("leggings", DatagenHelper.getLeggings(), "pajama");
-                builder.batchAddArmorRecipes("boots", DatagenHelper.getBoots(), null);
-
-                long elapsed = System.currentTimeMillis() - startTime;
-                TutorialMod.LOGGER.info("Automated recipe generation completed in {}ms", elapsed);
-                TutorialMod.LOGGER.info("  ✓ Total automated recipes generated: {}", builder.getTotalGenerated());
+                // ===== AUTO-GENERATE ARMOR RECIPES =====
+                generateArmorRecipes("helmet", DatagenHelper.getHelmets(), null);
+                generateArmorRecipes("chestplate", DatagenHelper.getChestplates(), "pajama");
+                generateArmorRecipes("leggings", DatagenHelper.getLeggings(), "pajama");
+                generateArmorRecipes("boots", DatagenHelper.getBoots(), null);
 
                 // ===== CUSTOM RECIPES FROM CONFIGURATION =====
-                // All custom recipes are now centralized in RecipeConfig.java
-                // To add/remove recipes: just edit RecipeConfig.SHAPED_RECIPES or SHAPELESS_RECIPES
-
-                int customBefore = builder.getTotalGenerated();
-
                 // Load shaped recipes from config
                 RecipeConfig.SHAPED_RECIPES.forEach((recipeId, recipe) -> {
-                    ShapedRecipeJsonBuilder shapeBuilder = createShaped(RecipeCategory.MISC, recipe.output);
-                    for (String line : recipe.pattern) {
-                        if (!line.isEmpty()) {
-                            shapeBuilder.pattern(line);
-                        }
-                    }
-                    recipe.ingredients.forEach(shapeBuilder::input);
-                    shapeBuilder.criterion(hasItem(recipe.criterion), conditionsFromItem(recipe.criterion));
-                    shapeBuilder.offerTo(exporter, new Identifier(TutorialMod.MOD_ID, recipeId));
+                    createShaped(RecipeCategory.MISC, recipe.output)
+                        .apply(builder -> {
+                            for (String line : recipe.pattern) {
+                                if (!line.isEmpty()) {
+                                    builder.pattern(line);
+                                }
+                            }
+                            recipe.ingredients.forEach(builder::input);
+                            builder.criterion(hasItem(recipe.criterion), conditionsFromItem(recipe.criterion));
+                        })
+                        .offerTo(exporter, Identifier.of(TutorialMod.MOD_ID, recipeId));
                 });
 
                 // Load shapeless recipes from config
                 RecipeConfig.SHAPELESS_RECIPES.forEach((recipeId, recipe) -> {
-                    ShapelessRecipeJsonBuilder builder2 = createShapeless(RecipeCategory.MISC, recipe.output, recipe.count);
-                    recipe.ingredients.forEach(builder2::input);
-                    builder2.criterion(hasItem(recipe.criterion), conditionsFromItem(recipe.criterion));
-                    builder2.offerTo(exporter, new Identifier(TutorialMod.MOD_ID, recipeId));
+                    createShapeless(RecipeCategory.MISC, recipe.output, recipe.count)
+                        .apply(builder -> {
+                            recipe.ingredients.forEach(builder::input);
+                            builder.criterion(hasItem(recipe.criterion), conditionsFromItem(recipe.criterion));
+                        })
+                        .offerTo(exporter, Identifier.of(TutorialMod.MOD_ID, recipeId));
                 });
 
                 int customCount = RecipeConfig.SHAPED_RECIPES.size() + RecipeConfig.SHAPELESS_RECIPES.size();
@@ -109,6 +98,126 @@ public class ModRecipeProvider extends FabricRecipeProvider {
                 // ===== SMITHING TRIM RECIPES =====
                 offerSmithingTrimRecipe(ModItems.KAUPEN_SMITHING_TEMPLATE, ModTrimPatterns.KAUPEN,
                         RegistryKey.of(RegistryKeys.RECIPE, Identifier.of(TutorialMod.MOD_ID, "kaupen")));
+
+                long elapsed = System.currentTimeMillis() - startTime;
+                TutorialMod.LOGGER.info("Recipe generation completed in {}ms", elapsed);
+            }
+
+            /**
+             * Generate tool recipes with batch processing
+             */
+            private void generateToolRecipes(String toolType, List<DatagenHelper.ItemEntry> items, Ingredient stick, String excludePattern) {
+                int count = 0;
+                for (var entry : items) {
+                    if (excludePattern != null && entry.name().contains(excludePattern)) continue;
+
+                    String materialName = DatagenHelper.getMaterialName(entry.name());
+                    Item material = DatagenHelper.findMaterialItem(materialName);
+
+                    if (material != null) {
+                        generateToolRecipe(toolType, entry.item(), material, stick);
+                        count++;
+                    }
+                }
+                TutorialMod.LOGGER.info("  ✓ Added {} {} recipes", count, toolType);
+            }
+
+            /**
+             * Generate a single tool recipe
+             */
+            private void generateToolRecipe(String toolType, ItemConvertible output, ItemConvertible material, Ingredient stick) {
+                String materialName = DatagenHelper.getMaterialName(output.asItem().toString());
+                String patternId = materialName + "_" + toolType;
+                RecipeCategory category = toolType.equals("sword") ? RecipeCategory.COMBAT : RecipeCategory.TOOLS;
+
+                ShapedRecipeJsonBuilder builder = createShaped(category, output);
+
+                // Apply the correct pattern
+                switch (toolType.toLowerCase()) {
+                    case "sword" -> {
+                        builder.pattern("M");
+                        builder.pattern("M");
+                        builder.pattern("S");
+                    }
+                    case "pickaxe" -> {
+                        builder.pattern("MMM");
+                        builder.pattern("MS ");
+                        builder.pattern("MS ");
+                    }
+                    case "shovel" -> {
+                        builder.pattern("M");
+                        builder.pattern("S");
+                        builder.pattern("S");
+                    }
+                    case "axe" -> {
+                        builder.pattern("MM ");
+                        builder.pattern("MS ");
+                        builder.pattern(" S ");
+                    }
+                    case "hoe" -> {
+                        builder.pattern("MM ");
+                        builder.pattern(" S ");
+                        builder.pattern(" S ");
+                    }
+                }
+
+                builder.input('M', material);
+                builder.input('S', stick);
+                builder.criterion(hasItem(material), conditionsFromItem(material));
+                builder.offerTo(exporter, Identifier.of(TutorialMod.MOD_ID, patternId));
+            }
+
+            /**
+             * Generate armor recipes with batch processing
+             */
+            private void generateArmorRecipes(String armorType, List<DatagenHelper.ItemEntry> items, String excludePattern) {
+                int count = 0;
+                for (var entry : items) {
+                    if (excludePattern != null && entry.name().contains(excludePattern)) continue;
+
+                    String materialName = DatagenHelper.getMaterialName(entry.name());
+                    Item material = DatagenHelper.findMaterialItem(materialName);
+
+                    if (material != null) {
+                        generateArmorRecipe(armorType, entry.item(), material);
+                        count++;
+                    }
+                }
+                TutorialMod.LOGGER.info("  ✓ Added {} {} recipes", count, armorType);
+            }
+
+            /**
+             * Generate a single armor recipe
+             */
+            private void generateArmorRecipe(String armorType, ItemConvertible output, ItemConvertible material) {
+                String materialName = DatagenHelper.getMaterialName(output.asItem().toString());
+                ShapedRecipeJsonBuilder builder = createShaped(RecipeCategory.COMBAT, output);
+
+                // Apply the correct pattern
+                switch (armorType.toLowerCase()) {
+                    case "helmet" -> {
+                        builder.pattern("MMM");
+                        builder.pattern("M M");
+                    }
+                    case "chestplate" -> {
+                        builder.pattern("M M");
+                        builder.pattern("MMM");
+                        builder.pattern("MMM");
+                    }
+                    case "leggings" -> {
+                        builder.pattern("MMM");
+                        builder.pattern("M M");
+                        builder.pattern("M M");
+                    }
+                    case "boots" -> {
+                        builder.pattern("M M");
+                        builder.pattern("M M");
+                    }
+                }
+
+                builder.input('M', material);
+                builder.criterion(hasItem(material), conditionsFromItem(material));
+                builder.offerTo(exporter, Identifier.of(TutorialMod.MOD_ID, materialName));
             }
         };
     }
