@@ -41,10 +41,20 @@ public class TutorialModClient implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient() {
+		TutorialMod.LOGGER.info("╔════════════════════════════════════════════════════════╗");
+		TutorialMod.LOGGER.info("║  KimDog SMP - Tutorial Mod Client Initialization Start  ║");
+		TutorialMod.LOGGER.info("╚════════════════════════════════════════════════════════╝");
+
 		// Register keybindings
+		TutorialMod.LOGGER.info("✓ Registering Key Bindings...");
 		ModKeyBindings.registerKeyBindings();
 
+		TutorialMod.LOGGER.info("╔════════════════════════════════════════════════════════╗");
+		TutorialMod.LOGGER.info("║           Loading Input & Camera Systems               ║");
+		TutorialMod.LOGGER.info("╚════════════════════════════════════════════════════════╝");
+
 		// Register zoom tick event
+		TutorialMod.LOGGER.info("✓ Registering Zoom & Camera Handlers...");
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			ZoomHandler.tick();
 			CameraResetHandler.tick();
@@ -53,31 +63,113 @@ public class TutorialModClient implements ClientModInitializer {
 		// Register zoom HUD overlay
 		HudRenderCallback.EVENT.register(new ZoomHudOverlay());
 
-		// Register stamina HUD + network receiver
+		TutorialMod.LOGGER.info("╔════════════════════════════════════════════════════════╗");
+		TutorialMod.LOGGER.info("║         Loading Network Payloads & HUD Systems         ║");
+		TutorialMod.LOGGER.info("╚════════════════════════════════════════════════════════╝");
+
+		// Automated network payload registration system
+		TutorialMod.LOGGER.info("✓ Registering Network Payloads (Stamina System)...");
+		registerStaminaPayloads();
+
+		TutorialMod.LOGGER.info("✓ Registering Network Payloads (Temperature System)...");
+		registerTemperaturePayloads();
+
+		TutorialMod.LOGGER.info("✓ Registering Network Payloads (Weather & Environment)...");
+		registerWeatherAndEnvironmentPayloads();
+
+		TutorialMod.LOGGER.info("✓ Registering Network Payloads (Chat & Social)...");
+		registerChatAndSocialPayloads();
+
+		TutorialMod.LOGGER.info("✓ Registering Network Payloads (Miscellaneous)...");
+		registerMiscellaneousPayloads();
+
+		TutorialMod.LOGGER.info("╔════════════════════════════════════════════════════════╗");
+		TutorialMod.LOGGER.info("║      Loading Block Rendering & Transparency           ║");
+		TutorialMod.LOGGER.info("╚════════════════════════════════════════════════════════╝");
+
+		TutorialMod.LOGGER.info("✓ Registering Block Render Layers...");
+		registerBlockRenderLayers();
+
+		TutorialMod.LOGGER.info("╔════════════════════════════════════════════════════════╗");
+		TutorialMod.LOGGER.info("║       Loading Entity Models & Renderers               ║");
+		TutorialMod.LOGGER.info("╚════════════════════════════════════════════════════════╝");
+
+		TutorialMod.LOGGER.info("✓ Registering Entity Models (Mantis)...");
+		EntityModelLayerRegistry.registerModelLayer(MantisModel.MANTIS, MantisModel::getTexturedModelData);
+		EntityRendererRegistry.register(ModEntities.MANTIS, MantisRenderer::new);
+
+		TutorialMod.LOGGER.info("✓ Registering Entity Models (Tomahawk Projectile)...");
+		EntityModelLayerRegistry.registerModelLayer(TomahawkProjectileModel.TOMAHAWK, TomahawkProjectileModel::getTexturedModelData);
+		EntityRendererRegistry.register(ModEntities.TOMAHAWK, TomahawkProjectileRenderer::new);
+
+		TutorialMod.LOGGER.info("✓ Registering Entity Renderers (Chair)...");
+		EntityRendererRegistry.register(ModEntities.CHAIR, ChairRenderer::new);
+
+		TutorialMod.LOGGER.info("╔════════════════════════════════════════════════════════╗");
+		TutorialMod.LOGGER.info("║        Loading Particles & Block Entities             ║");
+		TutorialMod.LOGGER.info("╚════════════════════════════════════════════════════════╝");
+
+		TutorialMod.LOGGER.info("✓ Registering Particles...");
+		ParticleFactoryRegistry.getInstance().register(ModParticles.PINK_GARNET_PARTICLE, PinkGarnetParticle.Factory::new);
+
+		TutorialMod.LOGGER.info("✓ Registering Block Entity Renderers...");
+		BlockEntityRendererFactories.register(ModBlockEntities.PEDESTAL_BE, PedestalBlockEntityRenderer::new);
+
+		TutorialMod.LOGGER.info("╔════════════════════════════════════════════════════════╗");
+		TutorialMod.LOGGER.info("║         Loading Screens & Screen Handlers             ║");
+		TutorialMod.LOGGER.info("╚════════════════════════════════════════════════════════╝");
+
+		TutorialMod.LOGGER.info("✓ Registering Screen Handlers...");
+		registerScreenHandlers();
+
+		TutorialMod.LOGGER.info("║");
+		TutorialMod.LOGGER.info("╔════════════════════════════════════════════════════════╗");
+		TutorialMod.LOGGER.info("║  ✅ Tutorial Mod Client Loaded Successfully            ║");
+		TutorialMod.LOGGER.info("╚════════════════════════════════════════════════════════╝");
+	}
+
+	/**
+	 * Automated stamina system payload registration
+	 */
+	private static void registerStaminaPayloads() {
+		// Stamina sync
 		ClientPlayNetworking.registerGlobalReceiver(StaminaSyncPayload.ID, (payload, context) -> {
 			double stamina = payload.stamina();
 			double max = payload.maxStamina();
 			context.client().execute(() -> StaminaHudOverlay.update(stamina, max));
 		});
 
+		// Sprint cooldown
 		ClientPlayNetworking.registerGlobalReceiver(SprintCooldownPayload.ID, (payload, context) -> {
 			int ticks = payload.cooldownTicks();
 			context.client().execute(() -> StaminaHudOverlay.updateCooldown(ticks));
 		});
 
+		HudRenderCallback.EVENT.register(new StaminaHudOverlay());
+	}
+
+	/**
+	 * Automated temperature system payload registration
+	 */
+	private static void registerTemperaturePayloads() {
+		// Player temperature
 		ClientPlayNetworking.registerGlobalReceiver(net.kaupenjoe.tutorialmod.network.TemperatureSyncPayload.ID, (payload, context) -> {
 			double temperature = payload.temperature();
 			context.client().execute(() -> StaminaHudOverlay.updateTemperature(temperature));
 		});
 
+		// World temperature
 		ClientPlayNetworking.registerGlobalReceiver(net.kaupenjoe.tutorialmod.network.WorldTemperatureSyncPayload.ID, (payload, context) -> {
 			double worldTemperature = payload.worldTemperature();
 			context.client().execute(() -> StaminaHudOverlay.updateWorldTemperature(worldTemperature));
 		});
+	}
 
-		HudRenderCallback.EVENT.register(new StaminaHudOverlay());
-
-		// Register weather notification client receiver + HUD
+	/**
+	 * Automated weather and environment system payload registration
+	 */
+	private static void registerWeatherAndEnvironmentPayloads() {
+		// Weather notification
 		ClientPlayNetworking.registerGlobalReceiver(net.kaupenjoe.tutorialmod.network.WeatherNotificationPayload.ID, (payload, context) -> {
 			String message = payload.message();
 			int color = payload.color();
@@ -85,12 +177,13 @@ public class TutorialModClient implements ClientModInitializer {
 		});
 		HudRenderCallback.EVENT.register(new net.kaupenjoe.tutorialmod.event.WeatherNotificationHud());
 
+		// Biome notification
 		ClientPlayNetworking.registerGlobalReceiver(net.kaupenjoe.tutorialmod.network.BiomeNotificationPayload.ID, (payload, context) -> {
 			context.client().execute(() -> BiomeNotificationHud.showNotification(payload.message(), payload.color()));
 		});
 		HudRenderCallback.EVENT.register(new BiomeNotificationHud());
 
-		// Register wind system client receiver + renderer
+		// Wind system
 		ClientPlayNetworking.registerGlobalReceiver(net.kaupenjoe.tutorialmod.network.WindSyncPayload.ID, (payload, context) -> {
 			net.minecraft.util.math.Vec3d direction = new net.minecraft.util.math.Vec3d(payload.dirX(), payload.dirY(), payload.dirZ());
 			double strength = payload.strength();
@@ -102,47 +195,30 @@ public class TutorialModClient implements ClientModInitializer {
 		});
 		net.kaupenjoe.tutorialmod.event.WindLineRenderer.register();
 
-		// Register swing attack client handler
+		// Register swing attack handler
 		net.kaupenjoe.tutorialmod.event.SwingAttackHandler.registerClient();
 
 		// Register stamina sound effects
 		net.kaupenjoe.tutorialmod.event.StaminaSoundEffects.register();
+	}
 
-		BlockRenderLayerMap.putBlock(ModBlocks.PINK_GARNET_TRAPDOOR, BlockRenderLayer.CUTOUT);
-
-		BlockRenderLayerMap.putBlock(ModBlocks.CAULIFLOWER_CROP, BlockRenderLayer.CUTOUT);
-		BlockRenderLayerMap.putBlock(ModBlocks.HONEY_BERRY_BUSH, BlockRenderLayer.CUTOUT);
-
-		BlockRenderLayerMap.putBlock(ModBlocks.DRIFTWOOD_SAPLING, BlockRenderLayer.CUTOUT);
-
-		EntityModelLayerRegistry.registerModelLayer(MantisModel.MANTIS, MantisModel::getTexturedModelData);
-		EntityRendererRegistry.register(ModEntities.MANTIS, MantisRenderer::new);
-
-		EntityModelLayerRegistry.registerModelLayer(TomahawkProjectileModel.TOMAHAWK, TomahawkProjectileModel::getTexturedModelData);
-		EntityRendererRegistry.register(ModEntities.TOMAHAWK, TomahawkProjectileRenderer::new);
-
-		EntityRendererRegistry.register(ModEntities.CHAIR, ChairRenderer::new);
-
-		ParticleFactoryRegistry.getInstance().register(ModParticles.PINK_GARNET_PARTICLE, PinkGarnetParticle.Factory::new);
-
-		BlockEntityRendererFactories.register(ModBlockEntities.PEDESTAL_BE, PedestalBlockEntityRenderer::new);
-		HandledScreens.register(ModScreenHandlers.PEDESTAL_SCREEN_HANDLER, PedestalScreen::new);
-
-		HandledScreens.register(ModScreenHandlers.GROWTH_CHAMBER_SCREEN_HANDLER, GrowthChamberScreen::new);
-
+	/**
+	 * Automated chat and social system payload registration
+	 */
+	private static void registerChatAndSocialPayloads() {
+		// Thirst system
 		ClientPlayNetworking.registerGlobalReceiver(ThirstSyncPayload.ID, (payload, context) -> {
 			context.client().execute(() -> UnifiedHudOverlay.updateThirst(payload.thirst(), payload.maxThirst()));
 		});
 
+		// Freecam countdown
 		ClientPlayNetworking.registerGlobalReceiver(FreecamCountdownPayload.ID, (payload, context) -> {
 			int remaining = payload.ticksRemaining();
 			int total = payload.totalTicks();
 			context.client().execute(() -> UnifiedHudOverlay.updateFreecamCountdown(remaining, total));
 		});
-		HudRenderCallback.EVENT.register(new UnifiedHudOverlay());
-		HudRenderCallback.EVENT.register(new AnimatedChatHud());
-		HudRenderCallback.EVENT.register(new net.kaupenjoe.tutorialmod.event.TypingIndicatorHud());
 
+		// Typing indicator
 		ClientPlayNetworking.registerGlobalReceiver(net.kaupenjoe.tutorialmod.network.TypingIndicatorPayload.ID, (payload, context) -> {
 			String playerName = payload.playerName();
 			boolean isTyping = payload.isTyping();
@@ -150,6 +226,7 @@ public class TutorialModClient implements ClientModInitializer {
 			context.client().execute(() -> net.kaupenjoe.tutorialmod.event.TypingIndicatorHud.updateTypingState(playerName, isTyping, partialText));
 		});
 
+		// Animated chat
 		ClientPlayNetworking.registerGlobalReceiver(net.kaupenjoe.tutorialmod.network.ChatAnimatedPayload.ID, (payload, context) -> {
 			String role = payload.role();
 			String name = payload.name();
@@ -186,7 +263,7 @@ public class TutorialModClient implements ClientModInitializer {
 			});
 		});
 
-		// Register advancement notification receiver
+		// Advancement notification
 		ClientPlayNetworking.registerGlobalReceiver(net.kaupenjoe.tutorialmod.network.AdvancementNotificationPayload.ID, (payload, context) -> {
 			String title = payload.title();
 			String description = payload.description();
@@ -195,17 +272,45 @@ public class TutorialModClient implements ClientModInitializer {
 			context.client().execute(() -> net.kaupenjoe.tutorialmod.event.AdvancementNotificationHud.showAdvancementNotification(title, description, advancementId, icon));
 		});
 
-		// Register advancement notification HUD
+		// Register all HUD overlays
+		HudRenderCallback.EVENT.register(new UnifiedHudOverlay());
+		HudRenderCallback.EVENT.register(new AnimatedChatHud());
+		HudRenderCallback.EVENT.register(new net.kaupenjoe.tutorialmod.event.TypingIndicatorHud());
 		HudRenderCallback.EVENT.register(new net.kaupenjoe.tutorialmod.event.AdvancementNotificationHud());
+	}
 
-        ClientPlayNetworking.registerGlobalReceiver(LoginStreakPayload.ID, (payload, context) -> {
-            int streak = payload.streak();
-            long day = payload.lastDay();
-            boolean increased = payload.increased();
-            boolean broken = payload.broken();
-            int previous = payload.previous();
-            context.client().execute(() -> LoginStreakHud.update(streak, day, increased, broken, previous));
-        });
-        HudRenderCallback.EVENT.register(new LoginStreakHud());
+	/**
+	 * Automated miscellaneous system payload registration
+	 */
+	private static void registerMiscellaneousPayloads() {
+		// Login streak system
+		ClientPlayNetworking.registerGlobalReceiver(LoginStreakPayload.ID, (payload, context) -> {
+			int streak = payload.streak();
+			long day = payload.lastDay();
+			boolean increased = payload.increased();
+			boolean broken = payload.broken();
+			int previous = payload.previous();
+			context.client().execute(() -> LoginStreakHud.update(streak, day, increased, broken, previous));
+		});
+
+		HudRenderCallback.EVENT.register(new LoginStreakHud());
+	}
+
+	/**
+	 * Automated block render layer registration
+	 */
+	private static void registerBlockRenderLayers() {
+		BlockRenderLayerMap.putBlock(ModBlocks.PINK_GARNET_TRAPDOOR, BlockRenderLayer.CUTOUT);
+		BlockRenderLayerMap.putBlock(ModBlocks.CAULIFLOWER_CROP, BlockRenderLayer.CUTOUT);
+		BlockRenderLayerMap.putBlock(ModBlocks.HONEY_BERRY_BUSH, BlockRenderLayer.CUTOUT);
+		BlockRenderLayerMap.putBlock(ModBlocks.DRIFTWOOD_SAPLING, BlockRenderLayer.CUTOUT);
+	}
+
+	/**
+	 * Automated screen handler registration
+	 */
+	private static void registerScreenHandlers() {
+		HandledScreens.register(ModScreenHandlers.PEDESTAL_SCREEN_HANDLER, PedestalScreen::new);
+		HandledScreens.register(ModScreenHandlers.GROWTH_CHAMBER_SCREEN_HANDLER, GrowthChamberScreen::new);
 	}
 }
