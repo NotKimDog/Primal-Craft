@@ -1,25 +1,10 @@
 {
-  "type": "minecraft:crafting_shaped",
-  "category": "equipment",
-  "key": {
-    "O": "minecraft:obsidian",
-    "S": [
-      "tutorialmod:acacia_stick",
-      "tutorialmod:birch_stick",
-      "tutorialmod:cherry_stick",
-      "tutorialmod:crimson_stick",
-      "tutorialmod:dark_oak_stick",
-      "tutorialmod:jungle_stick",
-      "tutorialmod:mangrove_stick",
-      "tutorialmod:pale_oak_stick",
-      "tutorialmod:spruce_stick",
-      "tutorialmod:warped_stick"
-    ]
-  },
-  "pattern": [
-    "OO ",
-    "OS ",
-    " S "
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:obsidian",
+    "minecraft:obsidian",
+    "minecraft:stick"
   ],
   "result": {
     "count": 1,

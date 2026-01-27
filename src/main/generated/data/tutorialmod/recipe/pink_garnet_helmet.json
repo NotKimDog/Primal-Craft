@@ -6,8 +6,7 @@
   },
   "pattern": [
     "MMM",
-    "M M",
-    "   "
+    "M M"
   ],
   "result": {
     "count": 1,

@@ -3,18 +3,7 @@
   "category": "misc",
   "key": {
     "P": "tutorialmod:driftwood_planks",
-    "S": [
-      "tutorialmod:acacia_stick",
-      "tutorialmod:birch_stick",
-      "tutorialmod:cherry_stick",
-      "tutorialmod:crimson_stick",
-      "tutorialmod:dark_oak_stick",
-      "tutorialmod:jungle_stick",
-      "tutorialmod:mangrove_stick",
-      "tutorialmod:pale_oak_stick",
-      "tutorialmod:spruce_stick",
-      "tutorialmod:warped_stick"
-    ]
+    "S": "minecraft:stick"
   },
   "pattern": [
     " P ",

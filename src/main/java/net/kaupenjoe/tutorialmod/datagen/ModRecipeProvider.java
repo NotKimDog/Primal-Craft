@@ -52,7 +52,9 @@ public class ModRecipeProvider extends FabricRecipeProvider {
 
                 // ===== AUTO-GENERATE TOOL RECIPES =====
                 generateToolRecipes("sword", DatagenHelper.getSwords(), STICKS, "obsidian");
-                generateToolRecipes("pickaxe", DatagenHelper.getPickaxes(), STICKS, null);
+                // Skip pickaxe - hammer is included in pickaxes list causing duplicates
+                // generateToolRecipes("pickaxe", DatagenHelper.getPickaxes(), STICKS, "hammer");
+                generateToolRecipes("hammer", DatagenHelper.getItemsContaining("hammer"), STICKS, null);
                 generateToolRecipes("shovel", DatagenHelper.getShovels(), STICKS, null);
                 generateToolRecipes("axe", DatagenHelper.getAxes(), STICKS, "obsidian");
                 generateToolRecipes("hoe", DatagenHelper.getHoes(), STICKS, null);
@@ -111,7 +113,7 @@ public class ModRecipeProvider extends FabricRecipeProvider {
                     Item material = DatagenHelper.findMaterialItem(materialName);
 
                     if (material != null) {
-                        generateToolRecipe(toolType, entry.item(), material, stick);
+                        generateToolRecipe(toolType, entry.item(), entry.name(), material, stick);
                         count++;
                     }
                 }
@@ -119,10 +121,9 @@ public class ModRecipeProvider extends FabricRecipeProvider {
             }
 
             /**
-             * Generate a single tool recipe
+             * Generate a single tool recipe with explicit item name
              */
-            private void generateToolRecipe(String toolType, ItemConvertible output, ItemConvertible material, Ingredient stick) {
-                String materialName = DatagenHelper.getMaterialName(output.asItem().toString());
+            private void generateToolRecipe(String toolType, ItemConvertible output, String itemName, ItemConvertible material, Ingredient stick) {
                 RecipeCategory category = toolType.equals("sword") ? RecipeCategory.COMBAT : RecipeCategory.TOOLS;
 
                 ShapedRecipeJsonBuilder builder = createShaped(category, output);
@@ -136,6 +137,11 @@ public class ModRecipeProvider extends FabricRecipeProvider {
                     }
                     case "pickaxe" -> {
                         builder.pattern("MMM");
+                        builder.pattern("MS ");
+                        builder.pattern("MS ");
+                    }
+                    case "hammer" -> {
+                        builder.pattern("MM ");
                         builder.pattern("MS ");
                         builder.pattern("MS ");
                     }
@@ -159,7 +165,7 @@ public class ModRecipeProvider extends FabricRecipeProvider {
                 builder.input('M', material);
                 builder.input('S', stick);
                 builder.criterion(hasItem(material), conditionsFromItem(material));
-                builder.offerTo(exporter);
+                builder.offerTo(exporter, itemName);
             }
 
             /**
@@ -174,7 +180,7 @@ public class ModRecipeProvider extends FabricRecipeProvider {
                     Item material = DatagenHelper.findMaterialItem(materialName);
 
                     if (material != null) {
-                        generateArmorRecipe(armorType, entry.item(), material);
+                        generateArmorRecipe(armorType, entry.item(), entry.name(), material);
                         count++;
                     }
                 }
@@ -182,9 +188,9 @@ public class ModRecipeProvider extends FabricRecipeProvider {
             }
 
             /**
-             * Generate a single armor recipe
+             * Generate a single armor recipe with explicit item name
              */
-            private void generateArmorRecipe(String armorType, ItemConvertible output, ItemConvertible material) {
+            private void generateArmorRecipe(String armorType, ItemConvertible output, String itemName, ItemConvertible material) {
                 ShapedRecipeJsonBuilder builder = createShaped(RecipeCategory.COMBAT, output);
 
                 // Apply the correct pattern
@@ -211,7 +217,7 @@ public class ModRecipeProvider extends FabricRecipeProvider {
 
                 builder.input('M', material);
                 builder.criterion(hasItem(material), conditionsFromItem(material));
-                builder.offerTo(exporter);
+                builder.offerTo(exporter, itemName);
             }
         };
     }

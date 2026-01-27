@@ -1,6 +1,6 @@
 {
   "type": "minecraft:crafting_shapeless",
-  "category": "equipment",
+  "category": "misc",
   "ingredients": [
     "tutorialmod:pink_garnet",
     "minecraft:blaze_rod"

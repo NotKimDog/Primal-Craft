@@ -13,7 +13,7 @@
     },
     "has_the_recipe": {
       "conditions": {
-        "recipe": "tutorialmod:raw_pink_garnet"
+        "recipe": "tutorialmod:raw_pink_garnet_from_block"
       },
       "trigger": "minecraft:recipe_unlocked"
     }
@@ -26,7 +26,7 @@
   ],
   "rewards": {
     "recipes": [
-      "tutorialmod:raw_pink_garnet"
+      "tutorialmod:raw_pink_garnet_from_block"
     ]
   }
 }
