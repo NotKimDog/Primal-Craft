@@ -194,7 +194,7 @@ Title: [Feature Name]
 
 ```java
 public class MySystem {
-    private static final Logger LOGGER = LoggerFactory.getLogger("tutorialmod");
+    private static final Logger LOGGER = LoggerFactory.getLogger("primal-craft");
     public static final int CONSTANT = 100;
     
     private int field;

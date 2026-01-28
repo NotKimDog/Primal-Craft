@@ -1,6 +1,6 @@
 # FAQ - Frequently Asked Questions
 
-Common questions and answers about KimDog SMP mod.
+Common questions and answers about Primal Craft mod.
 
 ## 🎮 Installation & Setup
 
@@ -8,7 +8,7 @@ Common questions and answers about KimDog SMP mod.
 **A:** 
 1. Install Fabric Loader for Minecraft 1.21.11
 2. Download Fabric API mod
-3. Download KimDog SMP JAR
+3. Download Primal Craft JAR
 4. Place both JARs in `.minecraft/mods/` folder
 5. Launch Minecraft with Fabric profile
 
@@ -24,7 +24,7 @@ See [Getting Started](Getting-Started) for detailed instructions.
 
 ### Q: Will this work with other mods?
 **A:** 
-Yes! KimDog SMP is designed to work with other mods. However, conflicts with mods that modify:
+Yes! Primal Craft is designed to work with other mods. However, conflicts with mods that modify:
 - Player attributes
 - Sprint mechanics
 - Custom HUD

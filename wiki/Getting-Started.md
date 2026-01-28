@@ -1,6 +1,6 @@
-# Getting Started with KimDog SMP
+# Getting Started with Primal Craft
 
-Complete installation and setup guide for KimDog SMP mod.
+Complete installation and setup guide for Primal Craft - A comprehensive survival overhaul mod.
 
 ## 📥 Installation
 
@@ -32,9 +32,9 @@ Complete installation and setup guide for KimDog SMP mod.
 2. Place the JAR file in your `.minecraft/mods/` folder
 3. Launch Minecraft with Fabric profile
 
-#### 3. Install KimDog SMP
+#### 3. Install Primal Craft
 
-1. Download KimDog SMP JAR file
+1. Download Primal Craft JAR file
 2. Place in `.minecraft/mods/` folder
 3. Launch Minecraft with Fabric profile
 
@@ -69,7 +69,7 @@ On your first launch:
 
 ## 🔧 Configuration
 
-KimDog SMP works out-of-the-box with default settings. Advanced configuration available through:
+Primal Craft works out-of-the-box with default settings. Advanced configuration available through:
 
 1. **Datapack Customization** - Modify recipes and loot tables
 2. **Config Files** - Coming in future versions
@@ -133,7 +133,7 @@ For more help, see [Troubleshooting Guide](Troubleshooting).
 1. Download server JAR for 1.21.11
 2. Install Fabric Server Loader
 3. Download Fabric API for server
-4. Add KimDog SMP JAR to mods folder
+4. Add Primal Craft JAR to mods folder
 5. Start server and configure
 
 **Recommended Server Properties:**

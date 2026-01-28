@@ -1,6 +1,6 @@
 # Troubleshooting Guide
 
-Common issues and solutions for KimDog SMP mod.
+Common issues and solutions for Primal Craft mod.
 
 ## 🚨 Installation Issues
 
@@ -14,7 +14,7 @@ Common issues and solutions for KimDog SMP mod.
 
 **Solutions:**
 1. Verify Fabric API is latest version for 1.21.11
-2. Delete KimDog SMP JAR and download again
+2. Delete Primal Craft JAR and download again
 3. Check Java version (8+ required)
 4. Delete `.minecraft/mods` cache
 5. Restart launcher and try again
@@ -58,7 +58,7 @@ Common issues and solutions for KimDog SMP mod.
 
 3. **Remove Conflicting Mods:**
    - Move mods to backup folder
-   - Test game with only KimDog SMP + Fabric API
+   - Test game with only Primal Craft + Fabric API
    - Add mods back one by one
 
 4. **Reinstall Fabric:**
@@ -374,7 +374,7 @@ Common issues and solutions for KimDog SMP mod.
 ```
 Title: [Brief description of bug]
 
-Version: KimDog SMP 2.3.0, Minecraft 1.21.11
+Version: Primal Craft 2.3.0, Minecraft 1.21.11
 
 Steps to Reproduce:
 1. Do this

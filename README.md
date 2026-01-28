@@ -1,12 +1,19 @@
-# KimDog SMP Overhaul (Fabric 1.21.11)
-A survival-focused Fabric modpack-style overhaul built from Kaupenjoe's tutorial base and expanded with systemic mechanics, new content, and quality-of-life HUD/UI polish.
+# Primal Craft (Fabric 1.21.11)
+**A comprehensive survival overhaul featuring stamina, thirst, temperature systems, and dynamic environmental challenges.**
 
-## Highlights
-- **Survival systems**: Stamina (actions drain, regen sync), Thirst (bottle-based recovery), Temperature (ambient + inventory/armor heat, wind, shelter checks), Exhaustion/Fatigue, Sleep/Hunger/Threat/Day-Night overhauls, Environmental hazards.
-- **World + content**: New blocks, items, tools, armor sets, particles, sounds, potions/effects, enchantment effects, loot tweaks, custom entities (e.g., Mantis), villager trades, worldgen hooks, vein miner, hammering, brewing/composting/strippable/flamability registrations.
+Master the elements, manage your resources, and conquer the wilderness in this hardcore survival expansion by KimDog Studios.
+
+## 🌟 Core Features
+- **Survival Systems**: Stamina (actions drain, regen sync), Thirst (bottle-based recovery), Temperature (ambient + inventory/armor heat, wind, shelter checks), Exhaustion/Fatigue, Sleep/Hunger/Threat/Day-Night overhauls, Environmental hazards.
+- **World + Content**: New blocks, items, tools, armor sets, particles, sounds, potions/effects, enchantment effects, loot tweaks, custom entities (e.g., Mantis), villager trades, worldgen hooks, vein miner, hammering, brewing/composting/strippable/flamability registrations.
 - **HUD & UX**: Stamina/thirst/inventory/temperature overlays, biome + weather notifications, animated chat, typing indicator, login streak badge, swing attack feedback, animated popups and sounds.
-- **Networking & systems**: Custom payloads for stamina, temperature, wind, weather/biome notices, login streaks, chat/typing; wind sync + particles; advancement notifications.
-- **Commands & utilities**: Vanish and Freecam commands, sprint cooldown handling, swing attack stamina drain, sleep stamina restoration.
+- **Networking & Systems**: Custom payloads for stamina, temperature, wind, weather/biome notices, login streaks, chat/typing; wind sync + particles; advancement notifications.
+- **Commands & Utilities**: Vanish and Freecam commands, sprint cooldown handling, swing attack stamina drain, sleep stamina restoration.
+
+## 🔗 Links
+- **Modrinth:** https://modrinth.com/project/DwBeOr6S
+- **Wiki:** [Complete Documentation](wiki/)
+- **Created by:** KimDog Studios
 
 ## Building & Running
 ```bash

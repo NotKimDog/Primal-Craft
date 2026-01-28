@@ -1,6 +1,6 @@
 # Multiplayer Guide (SMP Server Setup)
 
-Complete guide for setting up KimDog SMP on a Minecraft server for multiplayer play.
+Complete guide for setting up Primal Craft on a Minecraft server for multiplayer play.
 
 ## 🖥️ Server Installation
 
@@ -37,7 +37,7 @@ Complete guide for setting up KimDog SMP on a Minecraft server for multiplayer p
    - Download for 1.21.11
    - Place JAR in mods folder
 
-3. **Add KimDog SMP:**
+3. **Add Primal Craft:**
    - Download mod JAR
    - Place in mods folder
 
@@ -46,12 +46,12 @@ Complete guide for setting up KimDog SMP on a Minecraft server for multiplayer p
 1. **Edit `server.properties`:**
    ```properties
    # Basic Settings
-   motd=KimDog SMP Server
+   motd=Primal Craft Server
    max-players=10
    difficulty=3
    gamemode=survival
    
-   # Recommended for KimDog SMP
+   # Recommended for Primal Craft
    pvp=true
    spawn-protection=0
    online-mode=true

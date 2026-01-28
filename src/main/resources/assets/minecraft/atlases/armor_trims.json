@@ -40,8 +40,8 @@
         "trims/entity/humanoid_leggings/flow",
         "trims/entity/humanoid/bolt",
         "trims/entity/humanoid_leggings/bolt",
-        "tutorialmod:trims/entity/humanoid/kaupen",
-        "tutorialmod:trims/entity/humanoid_leggings/kaupen"
+        "primal-craft:trims/entity/humanoid/kaupen",
+        "primal-craft:trims/entity/humanoid_leggings/kaupen"
       ],
       "palette_key": "trims/color_palettes/trim_palette",
       "permutations": {
@@ -59,7 +59,7 @@
         "gold_darker": "trims/color_palettes/gold_darker",
         "diamond_darker": "trims/color_palettes/diamond_darker",
         "netherite_darker": "trims/color_palettes/netherite_darker",
-        "pink_garnet": "tutorialmod:trims/color_palettes/pink_garnet"
+        "pink_garnet": "primal-craft:trims/color_palettes/pink_garnet"
       }
     }
   ]

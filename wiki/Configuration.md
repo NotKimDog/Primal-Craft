@@ -138,7 +138,7 @@ Datapacks modify:
     {"item": "tutorialmod:pink_garnet"}
   ],
   "result": {
-    "item": "tutorialmod:pink_garnet_block",
+    "item": "primal-craft:pink_garnet_block",
     "count": 1
   }
 }

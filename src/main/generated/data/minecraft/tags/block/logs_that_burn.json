@@ -1,11 +1,11 @@
 {
   "values": [
-    "tutorialmod:driftwood_log",
-    "tutorialmod:driftwood_wood",
-    "tutorialmod:stripped_driftwood_log",
-    "tutorialmod:stripped_driftwood_wood",
-    "tutorialmod:driftwood_planks",
-    "tutorialmod:driftwood_leaves",
-    "tutorialmod:driftwood_sapling"
+    "primal-craft:driftwood_log",
+    "primal-craft:driftwood_wood",
+    "primal-craft:stripped_driftwood_log",
+    "primal-craft:stripped_driftwood_wood",
+    "primal-craft:driftwood_planks",
+    "primal-craft:driftwood_leaves",
+    "primal-craft:driftwood_sapling"
   ]
 }

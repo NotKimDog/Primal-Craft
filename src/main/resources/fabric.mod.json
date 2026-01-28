@@ -1,28 +1,32 @@
 {
 	"schemaVersion": 1,
-	"id": "tutorialmod",
+	"id": "primal-craft",
 	"version": "${version}",
-	"name": "KimDog's SMP 1.21.X",
-	"description": "A Fabric-only sound physics mod inspired by Sound Physics Remastered.",
+	"name": "Primal Craft",
+	"description": "A comprehensive survival overhaul featuring stamina, thirst, temperature systems, and dynamic environmental challenges. Master the elements, survive the world.",
 	"authors": [
 		"KimDog Studios"
 	],
 	"contact": {
-		"homepage": "",
-		"sources": "https://github.com/NotKimDog/KimDog-SMP-1.21.X"
+		"homepage": "https://modrinth.com/project/DwBeOr6S",
+		"sources": "https://github.com/NotKimDog/KimDog-SMP-1.21.X",
+		"issues": "https://github.com/NotKimDog/KimDog-SMP-1.21.X/issues"
 	},
 	"license": "MIT",
-	"icon": "assets/tutorialmod/icon.png",
+	"icon": "assets/primal-craft/icon.png",
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"net.kaupenjoe.tutorialmod.TutorialMod"
+			"net.kimdog_studios.primal_craft.PrimalCraft"
 		],
 		"client": [
-			"net.kaupenjoe.tutorialmod.TutorialModClient"
+			"net.kimdog_studios.primal_craft.PrimalCraftClient"
 		],
 		"fabric-datagen": [
-			"net.kaupenjoe.tutorialmod.TutorialModDataGenerator"
+			"net.kimdog_studios.primal_craft.PrimalCraftDataGenerator"
+		],
+		"modmenu": [
+			"net.kimdog_studios.primal_craft.client.config.ModMenuIntegration"
 		]
 	},
 	"depends": {
@@ -31,7 +35,20 @@
 		"java": ">=21",
 		"fabric-api": ">=${fabric_api_version}"
 	},
+	"suggests": {
+		"modmenu": "*"
+	},
 	"mixins": [
-		"tutorialmod.mixins.json"
-	]
+		"primal-craft.mixins.json"
+	],
+	"custom": {
+		"modmenu": {
+			"links": {
+				"modmenu.modrinth": "https://modrinth.com/project/DwBeOr6S",
+				"modmenu.github": "https://github.com/NotKimDog/KimDog-SMP-1.21.X",
+				"modmenu.wiki": "https://github.com/NotKimDog/KimDog-SMP-1.21.X/wiki"
+			},
+			"update_checker": true
+		}
+	}
 }

@@ -1,0 +1,23 @@
+{
+	"required": true,
+	"package": "net.kimdog_studios.primal_craft.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"mixins": [
+		"ServerPlayerMessageMixin",
+		"WeatherCommandMixin"
+	],
+	"client": [
+		"CameraFovMixin",
+		"MouseScrollMixin",
+		"MouseSensitivityMixin",
+		"HideHudMixin",
+		"CameraResetMixin",
+		"ClientPlayNetworkHandlerMixin",
+		"ChatScreenMixin",
+		"VeinMinerHighlightMixin",
+		"HideVanillaAdvancementMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

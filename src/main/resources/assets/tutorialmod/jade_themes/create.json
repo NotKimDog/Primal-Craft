@@ -1,7 +1,0 @@
-{
-	"version": 200,
-	"tooltipStyle": {
-		"sprite": "tutorialmod:create",
-		"tooltip": true
-	}
-}
