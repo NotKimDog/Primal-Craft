@@ -110,6 +110,38 @@ public class PrimalCraftClient implements ClientModInitializer {
 			HudRenderCallback.EVENT.register(new StaminaHudOverlay());
 			PrimalCraft.LOGGER.debug("    ✓ Stamina system initialized");
 
+			PrimalCraft.LOGGER.info("  🎮 Registering difficulty system...");
+			// Register difficulty HUD overlay
+			net.kimdog_studios.primal_craft.event.DifficultyHudOverlay.register();
+			PrimalCraft.LOGGER.debug("    ✓ Difficulty system initialized");
+
+			PrimalCraft.LOGGER.info("  🎨 Registering UI improvements...");
+			// Register debug HUD remover
+			net.kimdog_studios.primal_craft.event.DebugHudRemover.register();
+			// Register difficulty color coding
+			net.kimdog_studios.primal_craft.event.DifficultyColorHandler.register();
+			// Register day transition animation
+			net.kimdog_studios.primal_craft.event.DayTransitionHandler.register();
+			// Register third-person name display
+			net.kimdog_studios.primal_craft.event.ThirdPersonNameHandler.register();
+			// Register performance metrics HUD
+			net.kimdog_studios.primal_craft.event.PerformanceMetricsHud.register();
+			// Register window title customizer
+			net.kimdog_studios.primal_craft.event.WindowTitleCustomizer.register();
+			// Register custom window icon
+			net.kimdog_studios.primal_craft.event.CustomWindowIcon.register();
+			// Register fullscreen auto-launch
+			net.kimdog_studios.primal_craft.event.FullscreenAutoLaunchHandler.register();
+			// Register dynamic FPS optimizer
+			net.kimdog_studios.primal_craft.event.DynamicFpsOptimizer.register();
+			// Register drop confirmation
+			net.kimdog_studios.primal_craft.event.DropConfirmationHandler.register();
+			// Register dynamic lights
+			net.kimdog_studios.primal_craft.event.DynamicLightsHandler.register();
+			// Register Hytale Feel meta feature
+			net.kimdog_studios.primal_craft.event.HytaleFeel.register();
+			PrimalCraft.LOGGER.debug("    ✓ UI improvements registered");
+
 			PrimalCraft.LOGGER.info("  🌦️  Registering weather and environment systems...");
 			// Register weather notification client receiver + HUD
 			ClientPlayNetworking.registerGlobalReceiver(net.kimdog_studios.primal_craft.network.WeatherNotificationPayload.ID, (payload, context) -> {
@@ -182,6 +214,23 @@ public class PrimalCraftClient implements ClientModInitializer {
 			boolean isTyping = payload.isTyping();
 			String partialText = payload.partialText();
 			context.client().execute(() -> net.kimdog_studios.primal_craft.event.TypingIndicatorHud.updateTypingState(playerName, isTyping, partialText));
+		});
+
+		// Register sign editor payload and receiver
+		net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry.playS2C().register(
+			net.kimdog_studios.primal_craft.network.OpenSignEditorPayload.ID,
+			net.kimdog_studios.primal_craft.network.OpenSignEditorPayload.CODEC
+		);
+		ClientPlayNetworking.registerGlobalReceiver(net.kimdog_studios.primal_craft.network.OpenSignEditorPayload.ID, (payload, context) -> {
+			net.minecraft.util.math.BlockPos pos = payload.pos();
+			context.client().execute(() -> {
+				if (context.client().world != null) {
+					net.minecraft.block.entity.BlockEntity blockEntity = context.client().world.getBlockEntity(pos);
+					if (blockEntity instanceof net.minecraft.block.entity.SignBlockEntity signEntity) {
+						context.client().setScreen(new net.kimdog_studios.primal_craft.screen.custom.CustomSignEditorScreen(pos, signEntity));
+					}
+				}
+			});
 		});
 
 		ClientPlayNetworking.registerGlobalReceiver(net.kimdog_studios.primal_craft.network.ChatAnimatedPayload.ID, (payload, context) -> {

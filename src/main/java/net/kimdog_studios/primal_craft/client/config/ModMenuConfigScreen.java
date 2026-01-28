@@ -26,7 +26,7 @@ public class ModMenuConfigScreen {
      * Get a formatted summary of current configuration
      */
     public static String getConfigSummary() {
-        PrimalCraftConfig.ConfigData config = PrimalCraftConfig.getConfig();
+        PrimalCraftConfig.MasterConfig config = PrimalCraftConfig.getConfig();
         return String.format(
             "═══════════════════════════════════════════════════════════\n" +
             "🎮 PRIMAL CRAFT CONFIGURATION SUMMARY\n" +
@@ -53,25 +53,25 @@ public class ModMenuConfigScreen {
             "🔧 ADVANCED:\n" +
             "  • Debug Mode: %s\n" +
             "\n" +
-            "📝 Config File: config/primal-craft/config.json\n" +
+            "📝 Config Files: config/primal-craft/\n" +
             "═══════════════════════════════════════════════════════════\n",
 
-            config.gameplay.staminaSystemEnabled ? "✓ ENABLED" : "✗ DISABLED",
-            config.gameplay.thirstSystemEnabled ? "✓ ENABLED" : "✗ DISABLED",
-            config.gameplay.temperatureSystemEnabled ? "✓ ENABLED" : "✗ DISABLED",
-            config.gameplay.environmentalHazardsEnabled ? "✓ ENABLED" : "✗ DISABLED",
+            config.gameplay.stamina.enabled ? "✓ ENABLED" : "✗ DISABLED",
+            config.gameplay.thirst.enabled ? "✓ ENABLED" : "✗ DISABLED",
+            config.gameplay.temperature.enabled ? "✓ ENABLED" : "✗ DISABLED",
+            config.gameplay.hazards.enabled ? "✓ ENABLED" : "✗ DISABLED",
 
-            config.hud.showStaminaBar ? "✓ SHOWN" : "✗ HIDDEN",
-            config.hud.showThirstBar ? "✓ SHOWN" : "✗ HIDDEN",
-            config.hud.hudScale,
-            config.hud.hudOpacity * 100,
+            config.hud.visibility.showStamina ? "✓ SHOWN" : "✗ HIDDEN",
+            config.hud.visibility.showThirst ? "✓ SHOWN" : "✗ HIDDEN",
+            config.hud.styling.scale,
+            config.hud.styling.opacity * 100,
 
-            config.difficulty.staminalossDifficulty,
-            config.difficulty.thirstDifficulty,
-            config.difficulty.temperatureDifficulty,
-            config.difficulty.hazardDifficulty,
+            config.difficulty.core.stamina,
+            config.difficulty.core.thirst,
+            config.difficulty.core.temperature,
+            config.difficulty.core.hazards,
 
-            config.debugMode ? "✓ ENABLED" : "✗ DISABLED"
+            config.advanced.developer.debugMode ? "✓ ENABLED" : "✗ DISABLED"
         );
     }
 }

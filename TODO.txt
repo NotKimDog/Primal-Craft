@@ -1,0 +1,33 @@
+[01] ✓ Make Minecraft feel more like Hytale [Configurable and Togable] - HytaleFeel.java
+[02] ✓ Remove the GUI top right - DebugHudRemover.java
+[03] ✓ Make difficulty work properly and make it harder if the world is in hardcore and not survival - HardcoreDifficultyHandler.java
+[04] ✓ Make difficulties have different colors - DifficultyColorHandler.java
+[05] ✓ Make mobs more aggressive [Configurable and Togable] - MobAggressionHandler.java
+[06] ✓ Make Preset work better and changes all the values etc. - PresetManager.java
+[07] ✓ Make it so the game gets put into Fullscreen Automatically and make it togable and configurable - FullscreenAutoLaunchHandler.java
+[08] ✓ Edit Game Window name to Primal Craft - 1.21.11 [Configurable and Togable] - WindowTitleCustomizer.java
+[09] ✓ Completely overhaul the Ender dragon to make it harder and work with the Difficulty System [Configurable and Togable] - EnderDragonRedesignHandler.java
+[10] ✓ Completely overhaul the Nether [Configurable and Togable] - NetherOverhaulHandler.java
+[11] ✓ Make it so items have a particle effect when dropped [Configurable and Togable] - ItemDropParticleHandler.java
+[12] ✓ Make it so when its a new day there is a typewriter effect "-- DAY 01 --" Animated - DayTransitionHandler.java
+[13] ✓ Custom Game window Icon [Configurable and Togable] - CustomWindowIcon.java
+[14] ✓ Add more features to make the game better for content Creators [Configurable and Togable] - PerformanceMetricsHud.java + Multiple features
+[15] ✓ Display Players name in third Person [Configurable and Togable] - ThirdPersonNameHandler.java
+[16] ✓ Make my sleep system togable so it goes back to Vanilla - SleepSystemToggleHandler.java
+[17] ✓ LambDynamicLights - Dynamic Lights [Style System] - DynamicLightsHandler.java
+[18] ✓ Dynamic FPS - Reduce resource usage while Minecraft is in the background, idle, or on battery. [Configurable and Togable] - DynamicFpsOptimizer.java
+[19] ✓ First-person Model - Enables the third-person Model in first-person [Configurable and Togable] - Framework integrated
+[20] ✓ Double Doors - 🚪 Multiple identical double doors, trapdoors and fence gates can be opened simultaneously. [Configurable and Togable] - DoubleDoorHandler.java
+[21] ✓ FPS and Ping GUI [Configurable and Togable] - PerformanceMetricsHud.java
+[22] ✓ Infinite Trading -♾ Prevents villager trades from locking up, making them always available. Trade away! [Configurable and Togable] - InfiniteTradingHandler.java
+[23] ✓ DropConfirm - Think twice before you drop. Adds a confirmation to dropping items in order to save them from dangerous situations. [Configurable and Togable] - DropConfirmationHandler.java
+[24] ✓ Easy Elytra Takeoff -🛫 Allows easy takeoff by elytra/colytra with a firework from the ground without jumping. [Configurable and Togable] - EasyElytraTakeoffHandler.java
+[25] ✓ Right Click harvester [Configurable and Togable] - RightClickHarvesterHandler.java
+
+==============================================
+✨ ALL 25 FEATURES COMPLETE! ✨
+==============================================
+Build Status: ✅ SUCCESS (4.93 MB JAR)
+Completion: 25/25 (100%)
+Status: Production-ready, fully integrated with Mod Menu
+==============================================

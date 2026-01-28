@@ -74,6 +74,11 @@ public class PrimalCraft implements ModInitializer {
             net.kimdog_studios.primal_craft.client.config.PrimalCraftConfig.init();
             LOGGER.debug("    ✓ Configuration system initialized");
 
+            // Initialize Preset Manager
+            LOGGER.info("  📋 Initializing Preset Manager...");
+            net.kimdog_studios.primal_craft.util.PresetManager.init();
+            LOGGER.debug("    ✓ Preset Manager initialized");
+
             LOGGER.info("  📦 Registering item groups...");
             ModItemGroups.registerItemGroups();
             LOGGER.debug("    ✓ Item groups registered");
@@ -152,11 +157,46 @@ public class PrimalCraft implements ModInitializer {
             // Register swing attack payload codec (C2S)
             PayloadTypeRegistry.playC2S().register(net.kimdog_studios.primal_craft.network.TypingIndicatorPayload.ID, net.kimdog_studios.primal_craft.network.TypingIndicatorPayload.CODEC);
             PayloadTypeRegistry.playC2S().register(SwingAttackPayload.ID, SwingAttackPayload.CODEC);
-            payloadsRegistered += 2;
+            PayloadTypeRegistry.playC2S().register(net.kimdog_studios.primal_craft.network.UpdateSignTextPayload.ID, net.kimdog_studios.primal_craft.network.UpdateSignTextPayload.CODEC);
+            payloadsRegistered += 3;
             LOGGER.debug("    ✓ {} C2S (Client→Server) payloads registered", payloadsRegistered);
 
         // Stamina system (server-side regen + API)
         net.kimdog_studios.primal_craft.util.StaminaSystem.register();
+
+        // Difficulty System - Dynamic difficulty scaling and progression tracking
+        net.kimdog_studios.primal_craft.util.DifficultySystem.register();
+
+        // Difficulty Command Handler - Register difficulty commands
+        net.kimdog_studios.primal_craft.event.DifficultyCommandHandler.register();
+
+        // Difficulty Metrics Handler - Track player damage and deaths
+        net.kimdog_studios.primal_craft.event.DifficultyMetricsHandler.register();
+
+
+        // Mob Difficulty Handler - Scale mob difficulty with player progression
+        net.kimdog_studios.primal_craft.event.MobDifficultyHandler.register();
+
+        // Item Drop Particle Handler - Visual effects for dropped items
+        net.kimdog_studios.primal_craft.event.ItemDropParticleHandler.register();
+
+        // Right-Click Harvester - Auto-harvest crops on right-click
+        net.kimdog_studios.primal_craft.event.RightClickHarvesterHandler.register();
+
+        // Infinite Trading - Prevent villager trade lockups
+        net.kimdog_studios.primal_craft.event.InfiniteTradingHandler.register();
+
+        // Double Doors - Synchronize adjacent door opening
+        net.kimdog_studios.primal_craft.event.DoubleDoorHandler.register();
+
+        // Easy Elytra Takeoff - Ground-level elytra equip with firework
+        net.kimdog_studios.primal_craft.event.EasyElytraTakeoffHandler.register();
+
+        // Ender Dragon Redesign - Enhanced dragon boss difficulty
+        net.kimdog_studios.primal_craft.event.EnderDragonRedesignHandler.register();
+
+        // Nether Overhaul - Dimension enhancement with difficulty scaling
+        net.kimdog_studios.primal_craft.event.NetherOverhaulHandler.register();
 
         // Default action stamina hooks (sprint/jump/attack/use/break)
         net.kimdog_studios.primal_craft.event.StaminaHooks.register();
@@ -187,6 +227,9 @@ public class PrimalCraft implements ModInitializer {
 
         // Sleep Overhaul - Sleep is now CRUCIAL - skipping sleep has severe consequences
         net.kimdog_studios.primal_craft.event.SleepOverhaulHandler.register();
+
+        // Sleep System Toggle - Allow toggling between custom and vanilla sleep
+        net.kimdog_studios.primal_craft.event.SleepSystemToggleHandler.register();
 
         // Environmental Hazards - Biomes are dangerous (cold, heat, altitude)
         net.kimdog_studios.primal_craft.event.EnvironmentHazardsHandler.register();
@@ -220,6 +263,45 @@ public class PrimalCraft implements ModInitializer {
                 }
             }
         });
+
+        // Sign editor system
+        net.kimdog_studios.primal_craft.event.SignEditorHandler.register();
+
+        // Register UpdateSignText payload handler (C2S)
+        net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.registerGlobalReceiver(
+            net.kimdog_studios.primal_craft.network.UpdateSignTextPayload.ID,
+            (payload, context) -> {
+                context.server().execute(() -> {
+                    net.minecraft.server.network.ServerPlayerEntity player = context.player();
+                    net.minecraft.server.world.ServerWorld world = player.getEntityWorld();
+                    net.minecraft.util.math.BlockPos pos = payload.pos();
+
+                    // Verify the block entity exists and is a sign
+                    net.minecraft.block.entity.BlockEntity blockEntity = world.getBlockEntity(pos);
+                    if (blockEntity instanceof net.minecraft.block.entity.SignBlockEntity signEntity) {
+                        // Get the current sign text
+                        net.minecraft.block.entity.SignText signText = signEntity.getFrontText();
+
+                        // Parse formatting codes from the formatting string
+                        net.minecraft.text.MutableText newText = net.minecraft.text.Text.literal(payload.text());
+
+                        // Apply formatting codes (e.g., "§c§l" for red bold)
+                        if (!payload.formatting().isEmpty()) {
+                            String formatted = payload.formatting() + payload.text();
+                            newText = net.minecraft.text.Text.literal(formatted);
+                        }
+
+                        // Update the specific line
+                        net.minecraft.block.entity.SignText updatedText = signText.withMessage(payload.line(), newText);
+                        signEntity.setText(updatedText, true); // true = front side
+
+                        // Mark the block entity as dirty and sync to clients
+                        signEntity.markDirty();
+                        world.updateListeners(pos, world.getBlockState(pos), world.getBlockState(pos), 3);
+                    }
+                });
+            }
+        );
 
         // Register advancement notification system
         net.kimdog_studios.primal_craft.event.AdvancementNotificationHandler.register();

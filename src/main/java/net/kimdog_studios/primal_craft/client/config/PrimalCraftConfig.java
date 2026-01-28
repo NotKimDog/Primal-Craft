@@ -16,384 +16,475 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * 🎮 Primal Craft Configuration Manager
- * Handles all mod configuration settings with persistent JSON storage
- *
- * FEATURES:
- * ✓ Real-time Config Sync: All systems notified immediately when config changes
- * ✓ Listener-based Updates: Systems register listeners for config changes
- * ✓ Server Support: Ready for multiplayer config sync via network packets
- *
- * USAGE:
- * 1. Register listeners via registerConfigChangeListener()
- * 2. Modify config settings directly
- * 3. Call save() to persist and notify all listeners
- *
- * SERVER SYNC:
- * When on a server, config changes sync via network packets to all players.
- * The CONFIG_CHANGE_LISTENERS system ensures all client-side systems stay synchronized.
+ * 🎮 Primal Craft Configuration Manager (v3.0 - Modular)
+ * Each config section has its own JSON file in config/primal-craft/
  */
 public class PrimalCraftConfig {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Path CONFIG_DIR = Paths.get("config/primal-craft");
-    private static final File CONFIG_FILE = CONFIG_DIR.resolve("config.json").toFile();
 
-    // ═══════════════════════════════════════════════════════════════════════════════
-    // GAMEPLAY SETTINGS
-    // ═══════════════════════════════════════════════════════════════════════════════
+    private static final File GAMEPLAY_FILE = CONFIG_DIR.resolve("gameplay.json").toFile();
+    private static final File HUD_FILE = CONFIG_DIR.resolve("hud.json").toFile();
+    private static final File SYSTEMS_FILE = CONFIG_DIR.resolve("systems.json").toFile();
+    private static final File DIFFICULTY_FILE = CONFIG_DIR.resolve("difficulty.json").toFile();
+    private static final File ADVANCED_FILE = CONFIG_DIR.resolve("advanced.json").toFile();
 
+    // GAMEPLAY SETTINGS (gameplay.json)
     public static class GameplaySettings {
-        // System Toggles
-        public boolean staminaSystemEnabled = true;
-        public boolean thirstSystemEnabled = true;
-        public boolean temperatureSystemEnabled = true;
-        public boolean environmentalHazardsEnabled = true;
-        public boolean hungerOverhaulEnabled = true;
-        public boolean exhaustionEnabled = true;
+        public StaminaSettings stamina = new StaminaSettings();
+        public ThirstSettings thirst = new ThirstSettings();
+        public TemperatureSettings temperature = new TemperatureSettings();
+        public HazardSettings hazards = new HazardSettings();
+        public HungerSettings hunger = new HungerSettings();
 
-        // Stamina Settings
-        public float staminaDepletionRate = 1.0f;
-        public float staminaRecoveryRate = 1.0f;
-        public float sprintStaminaCost = 1.0f;
-        public float jumpStaminaCost = 1.0f;
-        public float swimStaminaCost = 1.0f;
-        public float attackStaminaCost = 1.0f;
-        public int maxStamina = 100;
-        public boolean staminaRegenWhileSprinting = false;
-        public float staminaRegenDelay = 2.0f; // seconds
+        // Compatibility properties for direct access
+        public boolean staminaSystemEnabled;
+        public float staminaDepletionRate;
+        public float staminaRecoveryRate;
+        public boolean thirstSystemEnabled;
+        public float thirstDepletionRate;
+        public float thirstRecoveryRate;
+        public boolean temperatureSystemEnabled;
+        public boolean environmentalHazardsEnabled;
 
-        // Thirst Settings
-        public float thirstDepletionRate = 1.0f;
-        public float thirstRecoveryRate = 1.0f;
-        public float sprintThirstMultiplier = 1.5f;
-        public float hotBiomeThirstMultiplier = 2.0f;
-        public int maxThirst = 20;
-        public boolean thirstAffectsHealth = true;
-        public float dehydrationDamage = 1.0f;
+        public static class StaminaSettings {
+            public boolean enabled = true;
+            public float depletionRate = 1.0f;
+            public float recoveryRate = 1.0f;
+            public float recoveryDelay = 2.0f;
+            public int maxStamina = 100;
+            public boolean regenWhileSprinting = false;
+            public float sprintCost = 1.0f;
+            public float jumpCost = 1.0f;
+        }
 
-        // Temperature Settings
-        public float temperatureChangeRate = 1.0f;
-        public boolean temperatureAffectsHealth = true;
-        public float coldDamage = 1.0f;
-        public float heatDamage = 1.0f;
-        public boolean clothingAffectsTemperature = true;
+        public static class ThirstSettings {
+            public boolean enabled = true;
+            public float depletionRate = 1.0f;
+            public float recoveryRate = 1.0f;
+            public int maxThirst = 20;
+            public float hotBiomeMultiplier = 2.0f;
+            public float desertMultiplier = 3.0f;
+        }
 
-        // Hunger Settings
-        public float hungerDepletionMultiplier = 1.0f;
-        public float hungerHealingCost = 1.0f;
-        public boolean naturalRegeneration = true;
-        public float saturationMultiplier = 1.0f;
+        public static class TemperatureSettings {
+            public boolean enabled = true;
+            public float changeRate = 1.0f;
+            public float coldDamage = 1.0f;
+            public float heatDamage = 1.0f;
+        }
 
-        @Override
-        public String toString() {
-            return String.format(
-                "GameplaySettings{stamina=%s, thirst=%s, temperature=%s, hazards=%s, hunger=%s, exhaustion=%s}",
-                staminaSystemEnabled, thirstSystemEnabled, temperatureSystemEnabled,
-                environmentalHazardsEnabled, hungerOverhaulEnabled, exhaustionEnabled
-            );
+        public static class HazardSettings {
+            public boolean enabled = true;
+            public float weatherIntensity = 1.0f;
+            public boolean lightningDanger = true;
+            public float hazardDamage = 1.0f;
+        }
+
+        public static class HungerSettings {
+            public boolean enabled = true;
+            public float depletionMultiplier = 1.0f;
+            public float saturationMultiplier = 1.0f;
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════════
-    // HUD SETTINGS
-    // ═══════════════════════════════════════════════════════════════════════════════
-
+    // HUD SETTINGS (hud.json)
     public static class HUDSettings {
-        // Bar Visibility
-        public boolean showStaminaBar = true;
-        public boolean showThirstBar = true;
-        public boolean showTemperatureIndicator = true;
-        public boolean showWeatherNotifications = true;
-        public boolean showBiomeNotifications = true;
-        public boolean showEffectIcons = true;
-        public boolean showDebugInfo = false;
+        public BarVisibility visibility = new BarVisibility();
+        public BarStyling styling = new BarStyling();
+        public ColorSettings colors = new ColorSettings();
+        public AnimationSettings animations = new AnimationSettings();
 
-        // Bar Appearance
-        public float hudScale = 1.0f;
-        public float hudOpacity = 1.0f;
-        public int hudXOffset = 0;
-        public int hudYOffset = 0;
+        // Compatibility properties for direct access
+        public boolean showStaminaBar;
+        public boolean showThirstBar;
+        public boolean showTemperatureIndicator;
+        public boolean showWeatherNotifications;
+        public boolean showBiomeNotifications;
+        public float hudScale;
+        public float hudOpacity;
 
-        // Bar Colors (ARGB hex)
-        public int staminaBarColor = 0xFFFFFF00; // Yellow
-        public int thirstBarColor = 0xFF00BFFF;  // Deep Sky Blue
-        public int lowStaminaColor = 0xFFFF4500; // Orange Red
-        public int lowThirstColor = 0xFFDC143C;  // Crimson
+        public static class BarVisibility {
+            public boolean showStamina = true;
+            public boolean showThirst = true;
+            public boolean showTemperature = true;
+            public boolean showWeatherNotifications = true;
+            public boolean showBiomeNotifications = true;
+            public boolean showDebugInfo = false;
+        }
 
-        // Animations
-        public boolean enableBarAnimations = true;
-        public boolean enableWarningFlash = true;
-        public float animationSpeed = 1.0f;
+        public static class BarStyling {
+            public float scale = 1.0f;
+            public float opacity = 1.0f;
+            public int xOffset = 0;
+            public int yOffset = 0;
+        }
 
-        // Text Display
-        public boolean showNumericValues = true;
-        public boolean showPercentages = false;
-        public boolean showLabels = true;
+        public static class ColorSettings {
+            public int staminaColor = 0xFFFFD700;
+            public int thirstColor = 0xFF00BFFF;
+            public int temperatureColor = 0xFFFF6347;
+        }
 
-        @Override
-        public String toString() {
-            return String.format(
-                "HUDSettings{stamina=%s, thirst=%s, temp=%s, opacity=%.2f}",
-                showStaminaBar, showThirstBar, showTemperatureIndicator, hudOpacity
-            );
+        public static class AnimationSettings {
+            public boolean enabled = true;
+            public float speed = 1.0f;
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════════
-    // SYSTEM SETTINGS (Zoom, Veinminer, etc.)
-    // ═══════════════════════════════════════════════════════════════════════════════
-
+    // SYSTEM SETTINGS (systems.json)
     public static class SystemSettings {
-        // Zoom Settings
-        public boolean zoomEnabled = true;
-        public float zoomSensitivity = 1.0f;
-        public float zoomSpeed = 1.0f;
-        public float maxZoom = 10.0f;
+        public ZoomSettings zoom = new ZoomSettings();
+        public VeinminerSettings veinminer = new VeinminerSettings();
 
-        // Veinminer Settings
-        public boolean veinminerEnabled = true;
-        public int veinminerMaxBlocks = 64;
-        public float veinminerSpeed = 1.0f;
-        public boolean veinminerOresOnly = true;
+        public static class ZoomSettings {
+            public boolean enabled = true;
+            public float sensitivity = 1.0f;
+            public float maxZoom = 10.0f;
+        }
 
-        @Override
-        public String toString() {
-            return String.format(
-                "SystemSettings{zoom=%s, veinminer=%s}",
-                zoomEnabled, veinminerEnabled
-            );
+        public static class VeinminerSettings {
+            public boolean enabled = true;
+            public int maxBlocksPerVein = 64;
+            public float speed = 1.0f;
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════════
-    // DIFFICULTY SETTINGS
-    // ═══════════════════════════════════════════════════════════════════════════════
-
+    // DIFFICULTY SETTINGS (difficulty.json)
     public static class DifficultySettings {
-        // Core Difficulty Multipliers
-        public float staminalossDifficulty = 1.0f;
+        public MasterDifficulty master = new MasterDifficulty();
+        public CoreMultipliers core = new CoreMultipliers();
+        public DamageScaling damage = new DamageScaling();
+        public DimensionMultipliers dimensions = new DimensionMultipliers();
+        public MobAndResourceScaling mobResources = new MobAndResourceScaling();
+
+        // Compatibility fields
         public float thirstDifficulty = 1.0f;
         public float temperatureDifficulty = 1.0f;
         public float hazardDifficulty = 1.0f;
+        public boolean enableDimensionMultipliers = true;
+        public boolean difficultyAffectsMobBehavior = true;
+        public boolean difficultyAffectsResourceScarcity = false;
 
-        // Damage Multipliers
-        public float environmentalDamageMultiplier = 1.0f;
-        public float dehydrationDamageMultiplier = 1.0f;
-        public float freezingDamageMultiplier = 1.0f;
-        public float heatstrokeDamageMultiplier = 1.0f;
+        // Metric weighting fields
+        public boolean enableMetricsWeighting = true;
+        public float playtimeWeight = 0.4f;
+        public float damageWeight = 0.3f;
+        public float deathWeight = 0.2f;
+        public float resourceWeight = 0.1f;
 
-        // Survival Challenges
-        public boolean enableHardcoreTemperature = false;
-        public boolean enableRealisticThirst = false;
-        public boolean enableExtremeWeather = false;
-        public boolean enableSeasonalDifficulty = false;
+        // System flags
+        public boolean isDifficultySystemEnabled = true;
+        public boolean dynamicDifficultyScaling = true;
+        public float scalingThresholdPerLevel = 100.0f;
 
-        @Override
-        public String toString() {
-            return String.format(
-                "DifficultySettings{stamina=%.2f, thirst=%.2f, temp=%.2f, hazard=%.2f}",
-                staminalossDifficulty, thirstDifficulty, temperatureDifficulty, hazardDifficulty
-            );
+        // Scaling enables
+        public boolean staminaScalingEnabled = true;
+        public boolean thirstScalingEnabled = true;
+        public boolean temperatureScalingEnabled = true;
+        public boolean hazardScalingEnabled = true;
+        public boolean damageScalingEnabled = true;
+        public boolean mobScalingEnabled = true;
+
+        // Additional stamina field
+        public float staminalossDifficulty = 1.0f;
+
+        public static class MasterDifficulty {
+            public boolean enabled = true;
+            public String currentPreset = "NORMAL";
+            public boolean dynamicScaling = true;
+        }
+
+        public static class CoreMultipliers {
+            public float stamina = 1.0f;
+            public float thirst = 1.0f;
+            public float temperature = 1.0f;
+            public float hazards = 1.0f;
+        }
+
+        public static class DamageScaling {
+            public float environmental = 1.0f;
+            public float dehydration = 1.0f;
+        }
+
+        public static class DimensionMultipliers {
+            public boolean enabled = true;
+            public float nether = 1.5f;
+            public float end = 2.5f;
+        }
+
+        public static class MobAndResourceScaling {
+            public boolean mobBehavior = true;
+            public float mobDamage = 1.0f;
+            public float mobHealth = 1.0f;
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════════
-    // ROOT CONFIG
-    // ═══════════════════════════════════════════════════════════════════════════════
+    // ADVANCED SETTINGS (advanced.json)
+    public static class AdvancedSettings {
+        public IntegrationSettings integrations = new IntegrationSettings();
+        public PerformanceSettings performance = new PerformanceSettings();
+        public DeveloperSettings developer = new DeveloperSettings();
+        public FeatureToggles features = new FeatureToggles();
+        public WindowSettings window = new WindowSettings();
 
-    public static class ConfigData {
+        public static class IntegrationSettings {
+            public boolean webDashboardEnabled = false;
+            public int webDashboardPort = 8080;
+        }
+
+        public static class PerformanceSettings {
+            public boolean enableParticles = true;
+            public boolean enableSounds = true;
+            public int updateFrequency = 20;
+        }
+
+        public static class DeveloperSettings {
+            public boolean debugMode = false;
+            public String logLevel = "INFO";
+        }
+
+        public static class FeatureToggles {
+            // Phase 1: Critical Fixes
+            public boolean hardcoreDifficulty = true;
+            public boolean presetSystem = true;
+            public boolean debugHudRemoval = true;
+            public boolean sleepSystemToggle = true;
+
+            // Phase 2: Gameplay Features
+            public boolean difficultyColors = true;
+            public boolean mobAggression = true;
+            public boolean itemDropParticles = true;
+            public boolean dayTransitionAnimation = true;
+            public boolean thirdPersonNames = true;
+            public boolean rightClickHarvester = true;
+
+            // Phase 3: Content Creator & Window
+            public boolean fpsAndPingGUI = false;
+            public boolean fullscreenAutoLaunch = false;
+            public boolean customWindowTitle = true;
+            public boolean customWindowIcon = false;
+
+            // Phase 4: Quality of Life
+            public boolean dynamicFpsOptimizer = false;
+            public boolean doubleDoors = true;
+            public boolean infiniteTrading = false;
+            public boolean dropConfirmation = false;
+            public boolean easyElytraTakeoff = true;
+            public boolean dynamicLights = false;
+
+            // Phase 5: Major Overhauls
+            public boolean dragonRedesign = true;
+            public boolean netherOverhaul = true;
+
+            // Meta Feature
+            public boolean hytaleFeelEnabled = true;
+        }
+
+        public static class WindowSettings {
+            public String customTitle = "Primal Craft";
+        }
+    }
+
+    // MASTER CONFIG
+    public static class MasterConfig {
         public GameplaySettings gameplay = new GameplaySettings();
         public HUDSettings hud = new HUDSettings();
         public SystemSettings systems = new SystemSettings();
         public DifficultySettings difficulty = new DifficultySettings();
-
-        // Advanced Features
-        public boolean webDashboardEnabled = false;
-        public boolean autoSaveConfig = true;
-        public boolean showDetailedTooltips = true;
-        public boolean debugMode = false;
-
-        // Performance
-        public boolean enableParticleEffects = true;
-        public boolean enableSoundEffects = true;
-        public int updateFrequency = 20; // ticks
-
-        // Compatibility
-        public boolean compatibilityMode = false;
-        public boolean disableVanillaConflicts = true;
-
-        // Notifications
-        public boolean enableChatNotifications = true;
-        public boolean enableScreenNotifications = true;
-        public boolean enableSoundNotifications = true;
-
-        @Override
-        public String toString() {
-            return String.format(
-                "ConfigData{%s, %s, %s, %s, webDashboard=%s, autoSave=%s, tooltips=%s, debug=%s}",
-                gameplay, hud, systems, difficulty, webDashboardEnabled, autoSaveConfig, showDetailedTooltips, debugMode
-            );
-        }
+        public AdvancedSettings advanced = new AdvancedSettings();
+        public String version = "3.0";
     }
 
-    private static ConfigData config = new ConfigData();
+    private static MasterConfig masterConfig = new MasterConfig();
+    private static final List<Consumer<MasterConfig>> CONFIG_CHANGE_LISTENERS = new ArrayList<>();
 
-    // ═══════════════════════════════════════════════════════════════════════════════
-    // CONFIG CHANGE LISTENERS - Real-time system updates
-    // ═══════════════════════════════════════════════════════════════════════════════
-
-    private static final List<Consumer<ConfigData>> CONFIG_CHANGE_LISTENERS = new ArrayList<>();
-
-    /**
-     * Register a listener to be notified when config changes
-     * Listeners are called immediately with the updated config
-     */
-    public static void registerConfigChangeListener(Consumer<ConfigData> listener) {
+    public static void registerConfigChangeListener(Consumer<MasterConfig> listener) {
         CONFIG_CHANGE_LISTENERS.add(listener);
-        PrimalCraft.LOGGER.info("✓ Config change listener registered (total: {})", CONFIG_CHANGE_LISTENERS.size());
+        PrimalCraft.LOGGER.info("✓ Config listener registered");
     }
 
-    /**
-     * Notify all listeners that config has changed
-     * Call this after any config modification
-     */
     private static void notifyConfigChange() {
-        PrimalCraft.LOGGER.info("[CONFIG_SYNC] Notifying {} listeners of config change", CONFIG_CHANGE_LISTENERS.size());
-        for (Consumer<ConfigData> listener : CONFIG_CHANGE_LISTENERS) {
+        for (Consumer<MasterConfig> listener : CONFIG_CHANGE_LISTENERS) {
             try {
-                listener.accept(config);
+                listener.accept(masterConfig);
             } catch (Exception e) {
-                PrimalCraft.LOGGER.error("[CONFIG_SYNC] Error notifying listener", e);
+                PrimalCraft.LOGGER.error("[CONFIG] Error notifying listener", e);
             }
         }
     }
 
-    /**
-     * Initialize configuration system
-     * Creates config directory and loads or creates config file
-     */
     public static void init() {
         try {
-            PrimalCraft.LOGGER.info("🎮 Initializing Primal Craft Configuration...");
-
-            // Create config directory if it doesn't exist
+            PrimalCraft.LOGGER.info("🎮 Initializing Modular Config (v3.0)...");
             Files.createDirectories(CONFIG_DIR);
-            PrimalCraft.LOGGER.info("✓ Config directory ready: {}", CONFIG_DIR.toAbsolutePath());
-
-            // Load config if exists, otherwise create default
-            if (CONFIG_FILE.exists()) {
-                load();
-                PrimalCraft.LOGGER.info("✓ Configuration loaded successfully");
-            } else {
-                save();
-                PrimalCraft.LOGGER.info("✓ New default configuration created");
-            }
-
-            PrimalCraft.LOGGER.info("✓ Configuration initialized: {}", config);
-
+            loadGameplay();
+            loadHUD();
+            loadSystems();
+            loadDifficulty();
+            loadAdvanced();
+            PrimalCraft.LOGGER.info("✓ All configs loaded");
         } catch (IOException e) {
-            PrimalCraft.LOGGER.error("❌ Failed to initialize configuration", e);
+            PrimalCraft.LOGGER.error("❌ Config init failed", e);
         }
     }
 
-    /**
-     * Load configuration from JSON file
-     */
-    public static void load() {
-        try {
-            if (CONFIG_FILE.exists()) {
-                try (FileReader reader = new FileReader(CONFIG_FILE)) {
-                    config = GSON.fromJson(reader, ConfigData.class);
-                    if (config == null) {
-                        config = new ConfigData();
-                    }
-                    PrimalCraft.LOGGER.info("✓ Config loaded from: {}", CONFIG_FILE.getAbsolutePath());
-                }
+    private static void loadGameplay() {
+        if (GAMEPLAY_FILE.exists()) {
+            try (FileReader reader = new FileReader(GAMEPLAY_FILE)) {
+                GameplaySettings loaded = GSON.fromJson(reader, GameplaySettings.class);
+                if (loaded != null) masterConfig.gameplay = loaded;
+            } catch (IOException e) {
+                PrimalCraft.LOGGER.error("Failed to load gameplay config", e);
+                saveGameplay();
             }
-        } catch (IOException e) {
-            PrimalCraft.LOGGER.error("❌ Failed to load configuration", e);
-            config = new ConfigData();
+        } else {
+            saveGameplay();
         }
     }
 
-    /**
-     * Save configuration to JSON file
-     */
+    private static void loadHUD() {
+        if (HUD_FILE.exists()) {
+            try (FileReader reader = new FileReader(HUD_FILE)) {
+                HUDSettings loaded = GSON.fromJson(reader, HUDSettings.class);
+                if (loaded != null) masterConfig.hud = loaded;
+            } catch (IOException e) {
+                saveHUD();
+            }
+        } else {
+            saveHUD();
+        }
+    }
+
+    private static void loadSystems() {
+        if (SYSTEMS_FILE.exists()) {
+            try (FileReader reader = new FileReader(SYSTEMS_FILE)) {
+                SystemSettings loaded = GSON.fromJson(reader, SystemSettings.class);
+                if (loaded != null) masterConfig.systems = loaded;
+            } catch (IOException e) {
+                saveSystems();
+            }
+        } else {
+            saveSystems();
+        }
+    }
+
+    private static void loadDifficulty() {
+        if (DIFFICULTY_FILE.exists()) {
+            try (FileReader reader = new FileReader(DIFFICULTY_FILE)) {
+                DifficultySettings loaded = GSON.fromJson(reader, DifficultySettings.class);
+                if (loaded != null) masterConfig.difficulty = loaded;
+            } catch (IOException e) {
+                saveDifficulty();
+            }
+        } else {
+            saveDifficulty();
+        }
+    }
+
+    private static void loadAdvanced() {
+        if (ADVANCED_FILE.exists()) {
+            try (FileReader reader = new FileReader(ADVANCED_FILE)) {
+                AdvancedSettings loaded = GSON.fromJson(reader, AdvancedSettings.class);
+                if (loaded != null) masterConfig.advanced = loaded;
+            } catch (IOException e) {
+                saveAdvanced();
+            }
+        } else {
+            saveAdvanced();
+        }
+    }
+
     public static void save() {
+        saveGameplay();
+        saveHUD();
+        saveSystems();
+        saveDifficulty();
+        saveAdvanced();
+        PrimalCraft.LOGGER.info("💾 All configs saved");
+        notifyConfigChange();
+    }
+
+    private static void saveGameplay() {
         try {
             Files.createDirectories(CONFIG_DIR);
-            try (FileWriter writer = new FileWriter(CONFIG_FILE)) {
-                GSON.toJson(config, writer);
-                PrimalCraft.LOGGER.info("✓ Configuration saved successfully");
-                // Notify all listeners that config has changed
-                notifyConfigChange();
+            try (FileWriter writer = new FileWriter(GAMEPLAY_FILE)) {
+                GSON.toJson(masterConfig.gameplay, writer);
             }
         } catch (IOException e) {
-            PrimalCraft.LOGGER.error("❌ Failed to save configuration", e);
+            PrimalCraft.LOGGER.error("Failed to save gameplay config", e);
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════════
-    // GETTERS & SETTERS
-    // ═══════════════════════════════════════════════════════════════════════════════
+    private static void saveHUD() {
+        try {
+            Files.createDirectories(CONFIG_DIR);
+            try (FileWriter writer = new FileWriter(HUD_FILE)) {
+                GSON.toJson(masterConfig.hud, writer);
+            }
+        } catch (IOException e) {
+            PrimalCraft.LOGGER.error("Failed to save HUD config", e);
+        }
+    }
 
-    public static ConfigData getConfig() {
-        return config;
+    private static void saveSystems() {
+        try {
+            Files.createDirectories(CONFIG_DIR);
+            try (FileWriter writer = new FileWriter(SYSTEMS_FILE)) {
+                GSON.toJson(masterConfig.systems, writer);
+            }
+        } catch (IOException e) {
+            PrimalCraft.LOGGER.error("Failed to save systems config", e);
+        }
+    }
+
+    private static void saveDifficulty() {
+        try {
+            Files.createDirectories(CONFIG_DIR);
+            try (FileWriter writer = new FileWriter(DIFFICULTY_FILE)) {
+                GSON.toJson(masterConfig.difficulty, writer);
+            }
+        } catch (IOException e) {
+            PrimalCraft.LOGGER.error("Failed to save difficulty config", e);
+        }
+    }
+
+    private static void saveAdvanced() {
+        try {
+            Files.createDirectories(CONFIG_DIR);
+            try (FileWriter writer = new FileWriter(ADVANCED_FILE)) {
+                GSON.toJson(masterConfig.advanced, writer);
+            }
+        } catch (IOException e) {
+            PrimalCraft.LOGGER.error("Failed to save advanced config", e);
+        }
+    }
+
+    public static MasterConfig getConfig() {
+        return masterConfig;
     }
 
     public static GameplaySettings getGameplay() {
-        return config.gameplay;
+        return masterConfig.gameplay;
     }
 
     public static HUDSettings getHUD() {
-        return config.hud;
+        return masterConfig.hud;
     }
 
     public static SystemSettings getSystems() {
-        return config.systems;
+        return masterConfig.systems;
     }
 
     public static DifficultySettings getDifficulty() {
-        return config.difficulty;
+        return masterConfig.difficulty;
     }
 
-    public static boolean isDebugMode() {
-        return config.debugMode;
+    public static AdvancedSettings getAdvanced() {
+        return masterConfig.advanced;
     }
 
-    public static void setDebugMode(boolean enabled) {
-        config.debugMode = enabled;
-        PrimalCraft.LOGGER.info("🔍 Debug mode: {}", enabled ? "ENABLED" : "DISABLED");
-        save();
-    }
-
-    /**
-     * Convert ConfigData to JSON string
-     */
-    public static String toJson(ConfigData data) {
-        return GSON.toJson(data);
-    }
-
-    /**
-     * Load ConfigData from JSON string
-     */
-    public static void fromJson(String json, ConfigData data) {
-        try {
-            ConfigData loaded = GSON.fromJson(json, ConfigData.class);
-            if (loaded != null) {
-                data.gameplay = loaded.gameplay;
-                data.hud = loaded.hud;
-                data.systems = loaded.systems;
-                data.difficulty = loaded.difficulty;
-                data.webDashboardEnabled = loaded.webDashboardEnabled;
-                data.autoSaveConfig = loaded.autoSaveConfig;
-                data.showDetailedTooltips = loaded.showDetailedTooltips;
-                data.debugMode = loaded.debugMode;
-                PrimalCraft.LOGGER.info("✓ Config loaded from JSON");
-                notifyConfigChange();
-            }
-        } catch (Exception e) {
-            PrimalCraft.LOGGER.error("❌ Failed to parse JSON config", e);
-        }
+    public static void load() {
+        init();
     }
 }

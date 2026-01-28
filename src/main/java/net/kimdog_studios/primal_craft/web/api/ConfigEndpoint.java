@@ -51,30 +51,30 @@ public class ConfigEndpoint implements HttpHandler {
 
             // Build gameplay section
             JSONObject gameplayObj = new JSONObject();
-            gameplayObj.put("staminaSystemEnabled", gameplay.staminaSystemEnabled);
-            gameplayObj.put("staminaDepletionRate", gameplay.staminaDepletionRate);
-            gameplayObj.put("staminaRecoveryRate", gameplay.staminaRecoveryRate);
-            gameplayObj.put("thirstSystemEnabled", gameplay.thirstSystemEnabled);
-            gameplayObj.put("thirstDepletionRate", gameplay.thirstDepletionRate);
-            gameplayObj.put("temperatureSystemEnabled", gameplay.temperatureSystemEnabled);
-            gameplayObj.put("environmentalHazardsEnabled", gameplay.environmentalHazardsEnabled);
+            gameplayObj.put("staminaSystemEnabled", gameplay.stamina.enabled);
+            gameplayObj.put("staminaDepletionRate", gameplay.stamina.depletionRate);
+            gameplayObj.put("staminaRecoveryRate", gameplay.stamina.recoveryRate);
+            gameplayObj.put("thirstSystemEnabled", gameplay.thirst.enabled);
+            gameplayObj.put("thirstDepletionRate", gameplay.thirst.depletionRate);
+            gameplayObj.put("temperatureSystemEnabled", gameplay.temperature.enabled);
+            gameplayObj.put("environmentalHazardsEnabled", gameplay.hazards.enabled);
 
             // Build HUD section
             JSONObject hudObj = new JSONObject();
-            hudObj.put("showStaminaBar", hud.showStaminaBar);
-            hudObj.put("showThirstBar", hud.showThirstBar);
-            hudObj.put("showTemperatureIndicator", hud.showTemperatureIndicator);
-            hudObj.put("showWeatherNotifications", hud.showWeatherNotifications);
-            hudObj.put("showBiomeNotifications", hud.showBiomeNotifications);
-            hudObj.put("hudScale", hud.hudScale);
-            hudObj.put("hudOpacity", hud.hudOpacity);
+            hudObj.put("showStaminaBar", hud.visibility.showStamina);
+            hudObj.put("showThirstBar", hud.visibility.showThirst);
+            hudObj.put("showTemperatureIndicator", hud.visibility.showTemperature);
+            hudObj.put("showWeatherNotifications", hud.visibility.showWeatherNotifications);
+            hudObj.put("showBiomeNotifications", hud.visibility.showBiomeNotifications);
+            hudObj.put("hudScale", hud.styling.scale);
+            hudObj.put("hudOpacity", hud.styling.opacity);
 
             // Build difficulty section
             JSONObject difficultyObj = new JSONObject();
-            difficultyObj.put("staminalossDifficulty", difficulty.staminalossDifficulty);
-            difficultyObj.put("thirstDifficulty", difficulty.thirstDifficulty);
-            difficultyObj.put("temperatureDifficulty", difficulty.temperatureDifficulty);
-            difficultyObj.put("hazardDifficulty", difficulty.hazardDifficulty);
+            difficultyObj.put("staminalossDifficulty", difficulty.core.stamina);
+            difficultyObj.put("thirstDifficulty", difficulty.core.thirst);
+            difficultyObj.put("temperatureDifficulty", difficulty.core.temperature);
+            difficultyObj.put("hazardDifficulty", difficulty.core.hazards);
 
             config.put("gameplay", gameplayObj);
             config.put("hud", hudObj);
@@ -109,31 +109,31 @@ public class ConfigEndpoint implements HttpHandler {
                 var gameplaySettings = PrimalCraftConfig.getGameplay();
 
                 if (gameplay.has("staminaSystemEnabled")) {
-                    gameplaySettings.staminaSystemEnabled = gameplay.getBoolean("staminaSystemEnabled");
+                    gameplaySettings.stamina.enabled = gameplay.getBoolean("staminaSystemEnabled");
                     updated++;
                 }
                 if (gameplay.has("staminaDepletionRate")) {
-                    gameplaySettings.staminaDepletionRate = (float) gameplay.getDouble("staminaDepletionRate");
+                    gameplaySettings.stamina.depletionRate = (float) gameplay.getDouble("staminaDepletionRate");
                     updated++;
                 }
                 if (gameplay.has("staminaRecoveryRate")) {
-                    gameplaySettings.staminaRecoveryRate = (float) gameplay.getDouble("staminaRecoveryRate");
+                    gameplaySettings.stamina.recoveryRate = (float) gameplay.getDouble("staminaRecoveryRate");
                     updated++;
                 }
                 if (gameplay.has("thirstSystemEnabled")) {
-                    gameplaySettings.thirstSystemEnabled = gameplay.getBoolean("thirstSystemEnabled");
+                    gameplaySettings.thirst.enabled = gameplay.getBoolean("thirstSystemEnabled");
                     updated++;
                 }
                 if (gameplay.has("thirstDepletionRate")) {
-                    gameplaySettings.thirstDepletionRate = (float) gameplay.getDouble("thirstDepletionRate");
+                    gameplaySettings.thirst.depletionRate = (float) gameplay.getDouble("thirstDepletionRate");
                     updated++;
                 }
                 if (gameplay.has("temperatureSystemEnabled")) {
-                    gameplaySettings.temperatureSystemEnabled = gameplay.getBoolean("temperatureSystemEnabled");
+                    gameplaySettings.temperature.enabled = gameplay.getBoolean("temperatureSystemEnabled");
                     updated++;
                 }
                 if (gameplay.has("environmentalHazardsEnabled")) {
-                    gameplaySettings.environmentalHazardsEnabled = gameplay.getBoolean("environmentalHazardsEnabled");
+                    gameplaySettings.hazards.enabled = gameplay.getBoolean("environmentalHazardsEnabled");
                     updated++;
                 }
             }
@@ -144,31 +144,31 @@ public class ConfigEndpoint implements HttpHandler {
                 var hudSettings = PrimalCraftConfig.getHUD();
 
                 if (hud.has("showStaminaBar")) {
-                    hudSettings.showStaminaBar = hud.getBoolean("showStaminaBar");
+                    hudSettings.visibility.showStamina = hud.getBoolean("showStaminaBar");
                     updated++;
                 }
                 if (hud.has("showThirstBar")) {
-                    hudSettings.showThirstBar = hud.getBoolean("showThirstBar");
+                    hudSettings.visibility.showThirst = hud.getBoolean("showThirstBar");
                     updated++;
                 }
                 if (hud.has("showTemperatureIndicator")) {
-                    hudSettings.showTemperatureIndicator = hud.getBoolean("showTemperatureIndicator");
+                    hudSettings.visibility.showTemperature = hud.getBoolean("showTemperatureIndicator");
                     updated++;
                 }
                 if (hud.has("showWeatherNotifications")) {
-                    hudSettings.showWeatherNotifications = hud.getBoolean("showWeatherNotifications");
+                    hudSettings.visibility.showWeatherNotifications = hud.getBoolean("showWeatherNotifications");
                     updated++;
                 }
                 if (hud.has("showBiomeNotifications")) {
-                    hudSettings.showBiomeNotifications = hud.getBoolean("showBiomeNotifications");
+                    hudSettings.visibility.showBiomeNotifications = hud.getBoolean("showBiomeNotifications");
                     updated++;
                 }
                 if (hud.has("hudScale")) {
-                    hudSettings.hudScale = (float) hud.getDouble("hudScale");
+                    hudSettings.styling.scale = (float) hud.getDouble("hudScale");
                     updated++;
                 }
                 if (hud.has("hudOpacity")) {
-                    hudSettings.hudOpacity = (float) hud.getDouble("hudOpacity");
+                    hudSettings.styling.opacity = (float) hud.getDouble("hudOpacity");
                     updated++;
                 }
             }
@@ -179,19 +179,19 @@ public class ConfigEndpoint implements HttpHandler {
                 var difficultySettings = PrimalCraftConfig.getDifficulty();
 
                 if (difficulty.has("staminalossDifficulty")) {
-                    difficultySettings.staminalossDifficulty = (float) difficulty.getDouble("staminalossDifficulty");
+                    difficultySettings.core.stamina = (float) difficulty.getDouble("staminalossDifficulty");
                     updated++;
                 }
                 if (difficulty.has("thirstDifficulty")) {
-                    difficultySettings.thirstDifficulty = (float) difficulty.getDouble("thirstDifficulty");
+                    difficultySettings.core.thirst = (float) difficulty.getDouble("thirstDifficulty");
                     updated++;
                 }
                 if (difficulty.has("temperatureDifficulty")) {
-                    difficultySettings.temperatureDifficulty = (float) difficulty.getDouble("temperatureDifficulty");
+                    difficultySettings.core.temperature = (float) difficulty.getDouble("temperatureDifficulty");
                     updated++;
                 }
                 if (difficulty.has("hazardDifficulty")) {
-                    difficultySettings.hazardDifficulty = (float) difficulty.getDouble("hazardDifficulty");
+                    difficultySettings.core.hazards = (float) difficulty.getDouble("hazardDifficulty");
                     updated++;
                 }
             }
