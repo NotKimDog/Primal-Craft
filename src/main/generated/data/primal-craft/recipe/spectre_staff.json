@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "primal-craft:pink_garnet",
+    "minecraft:blaze_rod"
+  ],
+  "result": {
+    "count": 1,
+    "id": "primal-craft:spectre_staff"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_pink_garnet": {
+      "conditions": {
+        "items": [
+          {
+            "items": "primal-craft:pink_garnet"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "primal-craft:pink_garnet_boots"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_pink_garnet"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "primal-craft:pink_garnet_boots"
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "layers": {
+    "humanoid": [
+      {
+        "texture": "primal-craft:pajama"
+      }
+    ],
+    "humanoid_leggings": [
+      {
+        "texture": "primal-craft:pajama"
+      }
+    ]
+  }
+}

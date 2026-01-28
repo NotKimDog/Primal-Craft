@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=east": {
+      "model": "primal-craft:block/chair",
+      "y": 90
+    },
+    "facing=north": {
+      "model": "primal-craft:block/chair"
+    },
+    "facing=south": {
+      "model": "primal-craft:block/chair",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "primal-craft:block/chair",
+      "y": 270
+    }
+  }
+}

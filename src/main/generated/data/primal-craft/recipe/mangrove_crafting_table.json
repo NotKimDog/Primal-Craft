@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "P": "minecraft:mangrove_planks"
+  },
+  "pattern": [
+    "PP ",
+    "PP ",
+    "   "
+  ],
+  "result": {
+    "count": 1,
+    "id": "primal-craft:mangrove_crafting_table"
+  }
+}

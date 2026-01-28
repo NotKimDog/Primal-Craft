@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "primal-craft:pink_garnet",
+    "primal-craft:pink_garnet",
+    "minecraft:stick"
+  ],
+  "result": {
+    "count": 1,
+    "id": "primal-craft:tomahawk"
+  }
+}

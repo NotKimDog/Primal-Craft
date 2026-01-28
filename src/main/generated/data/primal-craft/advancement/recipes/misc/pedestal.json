@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_driftwood_planks": {
+      "conditions": {
+        "items": [
+          {
+            "items": "primal-craft:driftwood_planks"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "primal-craft:pedestal"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_driftwood_planks"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "primal-craft:pedestal"
+    ]
+  }
+}

@@ -1,0 +1,7 @@
+{
+	"version": 200,
+	"tooltipStyle": {
+		"sprite": "primal-craft:dark",
+		"tooltip": true
+	}
+}

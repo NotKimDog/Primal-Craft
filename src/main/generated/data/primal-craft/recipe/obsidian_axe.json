@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:obsidian",
+    "minecraft:obsidian",
+    "minecraft:stick"
+  ],
+  "result": {
+    "count": 1,
+    "id": "primal-craft:obsidian_axe"
+  }
+}

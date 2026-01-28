@@ -1,0 +1,8 @@
+{
+  "type": "primal-craft:growth_chamber",
+  "ingredient": "primal-craft:raw_pink_garnet",
+  "result": {
+    "count": 16,
+    "id": "primal-craft:pink_garnet"
+  }
+}

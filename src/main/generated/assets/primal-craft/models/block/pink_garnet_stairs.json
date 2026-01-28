@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/stairs",
+  "textures": {
+    "bottom": "primal-craft:block/pink_garnet_block",
+    "side": "primal-craft:block/pink_garnet_block",
+    "top": "primal-craft:block/pink_garnet_block"
+  }
+}

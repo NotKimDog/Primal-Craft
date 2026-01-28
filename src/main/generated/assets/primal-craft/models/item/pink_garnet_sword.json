@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "primal-craft:item/pink_garnet_sword"
+  }
+}

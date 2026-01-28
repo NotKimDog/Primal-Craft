@@ -1,0 +1,16 @@
+// 1.21.11	-999999999-01-01T00:00:00	Primal Craft/Tags for minecraft:item
+af3cea78dfc2df1e5681a11651cb1fb826957d39 data/minecraft/tags/item/axes.json
+3f3e0a6d7cbc7f2758e4b82dd1e6c8892800777c data/minecraft/tags/item/chest_armor.json
+ef93453bcec7e3f998cdff60bb266211eb62d92d data/minecraft/tags/item/foot_armor.json
+50dbd010a4f610d992ea6db6510b17727ee09deb data/minecraft/tags/item/head_armor.json
+1274f6a86c5a3af674b5deb4be431300a7402395 data/minecraft/tags/item/hoes.json
+db3d619d8ae07b99b037883c51af0762b5388160 data/minecraft/tags/item/leg_armor.json
+7f867d22359fdbf1931a0cf38a1a863d64b6d112 data/minecraft/tags/item/logs_that_burn.json
+1a81bd6f5a373305d8849fc42f61a68a920d09cf data/minecraft/tags/item/pickaxes.json
+d22be51ddab793e67b30f134c56e25c1e0d2911f data/minecraft/tags/item/planks.json
+40762eb8fc26d35ac736ce8b6a3e80a2bea3f131 data/minecraft/tags/item/shovels.json
+9ab90c9be8cbb17a73385c12b7bb863b16428740 data/minecraft/tags/item/swords.json
+0faa312e47fddeae78b732aae6a0102fc7972898 data/minecraft/tags/item/trim_materials.json
+bf7e1f98ba70e81a0cdb81853600411dc5e2b556 data/minecraft/tags/item/trimmable_armor.json
+0faa312e47fddeae78b732aae6a0102fc7972898 data/primal-craft/tags/item/pink_garnet_repair.json
+dc6bbdb22615a1ed59602a7e4845c8916729674d data/primal-craft/tags/item/transformable_items.json

@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/button_pressed",
+  "textures": {
+    "texture": "primal-craft:block/pink_garnet_block"
+  }
+}

@@ -1,0 +1,10 @@
+// 1.21.11	-999999999-01-01T00:00:00	Primal Craft/Tags for minecraft:block
+c05b4af168d31535e941bb4ca9ddc9b4468689ed data/minecraft/tags/block/fence_gates.json
+24dbe66ac86a177b721b3be3382ebcccefc6866d data/minecraft/tags/block/fences.json
+93adefd091aa165e8785d0456d79e9542500bf9f data/minecraft/tags/block/logs_that_burn.json
+52e1f24786a980f6146ae5c4ec253628bffa37cb data/minecraft/tags/block/mineable/axe.json
+89b15e7e440914d3e3070b6238fba31c18948b46 data/minecraft/tags/block/mineable/pickaxe.json
+77e21376d69451c5d6b3f8102b52b386c40fa132 data/minecraft/tags/block/needs_diamond_tool.json
+0bcf405a395576643cf17d72a5c18092a7f9f81e data/minecraft/tags/block/needs_iron_tool.json
+678c819e6db33e179bdc1b284b4c6c82a9baf7da data/minecraft/tags/block/walls.json
+848922da804993c457491e050267e489068d2801 data/primal-craft/tags/block/needs_pink_garnet_tool.json

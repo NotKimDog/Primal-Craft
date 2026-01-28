@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "primal-craft:cauliflower"
+  ],
+  "result": {
+    "count": 1,
+    "id": "primal-craft:cauliflower_seeds"
+  }
+}

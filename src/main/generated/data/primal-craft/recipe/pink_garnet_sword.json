@@ -1,0 +1,28 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "M": "primal-craft:pink_garnet",
+    "S": [
+      "primal-craft:acacia_stick",
+      "primal-craft:birch_stick",
+      "primal-craft:cherry_stick",
+      "primal-craft:crimson_stick",
+      "primal-craft:dark_oak_stick",
+      "primal-craft:jungle_stick",
+      "primal-craft:mangrove_stick",
+      "primal-craft:pale_oak_stick",
+      "primal-craft:spruce_stick",
+      "primal-craft:warped_stick"
+    ]
+  },
+  "pattern": [
+    "M",
+    "M",
+    "S"
+  ],
+  "result": {
+    "count": 1,
+    "id": "primal-craft:pink_garnet_sword"
+  }
+}

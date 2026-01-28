@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_cauliflower": {
+      "conditions": {
+        "items": [
+          {
+            "items": "primal-craft:cauliflower"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "primal-craft:cauliflower_seeds"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_cauliflower"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "primal-craft:cauliflower_seeds"
+    ]
+  }
+}

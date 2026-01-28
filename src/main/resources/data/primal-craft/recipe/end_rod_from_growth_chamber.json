@@ -1,0 +1,7 @@
+{
+  "type": "primal-craft:growth_chamber",
+  "ingredient": "minecraft:stick",
+  "result": {
+    "id": "minecraft:end_rod"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "type": "primal-craft:growth_chamber",
+  "ingredient": "minecraft:feather",
+  "result": {
+    "id": "minecraft:coal"
+  }
+}

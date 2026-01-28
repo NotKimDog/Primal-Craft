@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/wall_inventory",
+  "textures": {
+    "wall": "primal-craft:block/pink_garnet_block"
+  }
+}

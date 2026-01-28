@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:string",
+    "minecraft:string",
+    "minecraft:string",
+    "primal-craft:pink_garnet"
+  ],
+  "result": {
+    "count": 1,
+    "id": "primal-craft:kaupen_bow"
+  }
+}

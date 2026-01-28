@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "P": "minecraft:warped_planks"
+  },
+  "pattern": [
+    "PP ",
+    "PP ",
+    "   "
+  ],
+  "result": {
+    "count": 1,
+    "id": "primal-craft:warped_crafting_table"
+  }
+}

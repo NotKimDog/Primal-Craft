@@ -1,0 +1,100 @@
+{
+  "chisel_use": {
+    "subtitle": "sounds.primal-craft.chisel_use",
+    "sounds": [
+      "primal-craft:chisel_use"
+    ]
+  },
+  "magic_block_break": {
+    "subtitle": "sounds.primal-craft.magic_block_break",
+    "sounds": [
+      "primal-craft:magic_block_break"
+    ]
+  },
+  "magic_block_step": {
+    "subtitle": "sounds.primal-craft.magic_block_step",
+    "sounds": [
+      "primal-craft:magic_block_step"
+    ]
+  },
+  "magic_block_place": {
+    "subtitle": "sounds.primal-craft.magic_block_place",
+    "sounds": [
+      "primal-craft:magic_block_place"
+    ]
+  },
+  "magic_block_hit": {
+    "subtitle": "sounds.primal-craft.magic_block_hit",
+    "sounds": [
+      "primal-craft:magic_block_hit"
+    ]
+  },
+  "magic_block_fall": {
+    "subtitle": "sounds.primal-craft.magic_block_fall",
+    "sounds": [
+      "primal-craft:magic_block_fall"
+    ]
+  },
+  "bar_brawl": {
+    "sounds": [
+      {
+        "name": "primal-craft:bar_brawl",
+        "stream": true
+      }
+    ]
+  },
+  "typing_start": {
+    "subtitle": "sounds.primal-craft.typing_start",
+    "sounds": [
+      "ui.button.click"
+    ]
+  },
+  "chat_send": {
+    "subtitle": "sounds.primal-craft.chat_send",
+    "sounds": [
+      "primal-craft:chat_send"
+    ]
+  },
+  "chat_receive": {
+    "subtitle": "sounds.primal-craft.chat_receive",
+    "sounds": [
+      "primal-craft:chat_receive"
+    ]
+  },
+    "notification_ping": {
+    "subtitle": "sounds.primal-craft.notification_ping",
+    "sounds": [
+      "primal-craft:notification_ping"
+    ]
+  },
+  "energy_low": {
+    "subtitle": "sounds.primal-craft.energy_low",
+    "sounds": [
+      "primal-craft:energy_low"
+    ]
+  },
+  "clear_weather": {
+    "subtitle": "sounds.primal-craft.clear_weather",
+    "sounds": [
+      "primal-craft:clear_weather"
+    ]
+  },
+  "rain_weather": {
+    "subtitle": "sounds.primal-craft.rain_weather",
+    "sounds": [
+      "primal-craft:rain_weather"
+    ]
+  },
+  "thunder_weather": {
+    "subtitle": "sounds.primal-craft.thunder_weather",
+    "sounds": [
+      "primal-craft:thunder_weather"
+    ]
+  },
+  "biome_sound": {
+    "subtitle": "sounds.primal-craft.biome_sound",
+    "sounds": [
+      "primal-craft:biome_sound"
+    ]
+  }
+}

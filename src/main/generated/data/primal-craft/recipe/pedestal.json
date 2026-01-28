@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "P": "primal-craft:driftwood_planks"
+  },
+  "pattern": [
+    " P ",
+    "P P",
+    " P "
+  ],
+  "result": {
+    "count": 1,
+    "id": "primal-craft:pedestal"
+  }
+}

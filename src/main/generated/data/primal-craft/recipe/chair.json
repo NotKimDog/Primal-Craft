@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "P": "primal-craft:driftwood_planks",
+    "S": "minecraft:stick"
+  },
+  "pattern": [
+    " P ",
+    "PS ",
+    "   "
+  ],
+  "result": {
+    "count": 1,
+    "id": "primal-craft:chair"
+  }
+}

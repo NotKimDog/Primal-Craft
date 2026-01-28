@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "P": "primal-craft:pink_garnet"
+  },
+  "pattern": [
+    "PPP"
+  ],
+  "result": {
+    "count": 1,
+    "id": "primal-craft:pink_garnet_slab"
+  }
+}

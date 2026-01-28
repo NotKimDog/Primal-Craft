@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "type=bottom": {
+      "model": "primal-craft:block/pink_garnet_slab"
+    },
+    "type=double": {
+      "model": "primal-craft:block/pink_garnet_block"
+    },
+    "type=top": {
+      "model": "primal-craft:block/pink_garnet_slab_top"
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "clicked=false": {
+      "model": "primal-craft:block/pink_garnet_lamp"
+    },
+    "clicked=true": {
+      "model": "primal-craft:block/pink_garnet_lamp_on"
+    }
+  }
+}

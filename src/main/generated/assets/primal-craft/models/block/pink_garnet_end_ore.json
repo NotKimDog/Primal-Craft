@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "primal-craft:block/pink_garnet_end_ore"
+  }
+}

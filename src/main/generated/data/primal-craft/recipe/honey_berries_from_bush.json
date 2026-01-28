@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "primal-craft:honey_berries"
+  ],
+  "result": {
+    "count": 2,
+    "id": "primal-craft:honey_berries"
+  }
+}
