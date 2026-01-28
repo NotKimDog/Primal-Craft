@@ -258,6 +258,7 @@ public class PrimalCraftConfig {
             public boolean dayTransitionAnimation = true;
             public boolean thirdPersonNames = true;
             public boolean rightClickHarvester = true;
+            public boolean difficultyHudOverlay = false;
 
             // Phase 3: Content Creator & Window
             public boolean fpsAndPingGUI = false;

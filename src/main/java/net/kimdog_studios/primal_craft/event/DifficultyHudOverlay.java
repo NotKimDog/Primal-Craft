@@ -133,6 +133,10 @@ public class DifficultyHudOverlay implements HudRenderCallback {
             return false;
         }
 
+        if (!PrimalCraftConfig.getAdvanced().features.difficultyHudOverlay) {
+            return false;
+        }
+
         // Don't render if config says not to
         if (!PrimalCraftConfig.getHUD().visibility.showDebugInfo && !showDifficultyHud) {
             return false;
