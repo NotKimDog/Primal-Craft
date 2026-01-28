@@ -2,6 +2,7 @@ plugins {
 	id 'net.fabricmc.fabric-loom-remap' version "${loom_version}"
 	id 'maven-publish'
 	id 'org.gradle.java-library'
+	id 'com.modrinth.minotaur' version '2.+'
 }
 
 // Logging utilities (available to all tasks)
@@ -1777,3 +1778,108 @@ tasks.register('showVersionInfo') {
 	}
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// MODRINTH AUTOMATED PUBLISHING
+// ═══════════════════════════════════════════════════════════════════════════════
+
+modrinth {
+	// Token loaded from environment variable (set in .env file)
+	token = System.getenv("MODRINTH_API_TOKEN") ?: ""
+
+	// Project details
+	projectId = "DwBeOr6S"
+	versionNumber = project.mod_version
+	versionName = "Primal Craft ${project.mod_version}"
+	versionType = "release" // Can be: release, beta, alpha
+
+	// Upload the built JAR
+	uploadFile = remapJar
+
+	// Game versions
+	gameVersions = ["1.21", "1.21.1"]
+
+	// Loaders
+	loaders = ["fabric"]
+
+	// Dependencies
+	dependencies {
+		required.project "fabric-api"
+	}
+
+	// Changelog
+	changelog = """
+Full Release - Configuration System Complete!
+
+### New Features
+- Configuration System: 78+ options across 9 tabs
+- Config Menu: Press ] to open/close (hotkey rebindable)
+- Difficulty Presets: 5 pre-configured profiles
+- Import/Export: Backup and share configurations
+- Real-time Sync: Changes apply instantly
+- Tooltips: Every option documented
+- Help Tab: Tips and controls guide
+- Change History: Track all modifications
+
+### Systems Configured
+- Gameplay (Stamina, Thirst, Temperature, Hunger)
+- HUD & Display (bars, scale, opacity, animations)
+- Systems (Zoom, Veinminer)
+- Difficulty (multipliers and challenges)
+- Presets (Vanilla+, Easy, Normal, Hard, Hardcore)
+
+### UI Improvements
+- Professional tabbed interface
+- Smooth scrolling with proper clipping
+- Color-coded difficulty levels
+- Quick reset buttons
+- Dark/Light theme toggle
+"""
+
+	// Sync with repository on publish
+	syncBodyFrom = rootProject.file("MODRINTH_DESCRIPTION.md").text
+}
+
+// Task to publish to Modrinth
+tasks.register('publishModrinth') {
+	group = 'publishing'
+	description = 'Publishes the mod to Modrinth'
+
+	dependsOn build, tasks.named('modrinth')
+
+	doFirst {
+		def token = System.getenv("MODRINTH_API_TOKEN")
+		if (!token || token.isEmpty()) {
+			throw new GradleException("MODRINTH_API_TOKEN environment variable not set! Please set it in .env file.")
+		}
+
+		println ""
+		println "╔════════════════════════════════════════════════════════════╗"
+		println "║  MODRINTH AUTOMATED PUBLISHING                             ║"
+		println "╚════════════════════════════════════════════════════════════╝"
+		println "  📦 Preparing release..."
+		println "    • Project: Primal Craft"
+		println "    • Version: ${project.mod_version}"
+		println "    • Type: release"
+		println "    • Game Versions: 1.21, 1.21.1"
+		println "    • Loader: Fabric"
+		println ""
+	}
+
+	doLast {
+		println ""
+		println "╔════════════════════════════════════════════════════════════╗"
+		println "║  ✅ MODRINTH PUBLISH COMPLETE                              ║"
+		println "╚════════════════════════════════════════════════════════════╝"
+		println "  🔗 View at: https://modrinth.com/mod/DwBeOr6S"
+		println ""
+	}
+}
+
+// Add publishModrinth to the full build cycle
+tasks.named('build') {
+	doLast {
+		println ""
+		println "  💡 TIP: Run 'gradle publishModrinth' to publish to Modrinth"
+		println ""
+	}
+}
