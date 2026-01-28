@@ -69,6 +69,11 @@ public class PrimalCraft implements ModInitializer {
         LOGGER.info("  🔧 Starting mod initialization...");
 
         try {
+            // ========== CONFIGURATION INITIALIZATION ==========
+            LOGGER.info("  ⚙️  Initializing configuration system...");
+            net.kimdog_studios.primal_craft.client.config.PrimalCraftConfig.init();
+            LOGGER.debug("    ✓ Configuration system initialized");
+
             LOGGER.info("  📦 Registering item groups...");
             ModItemGroups.registerItemGroups();
             LOGGER.debug("    ✓ Item groups registered");

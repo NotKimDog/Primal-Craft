@@ -20,9 +20,23 @@ public class ModrinthPublisher {
     private static final Logger LOGGER = LoggerFactory.getLogger("primal-craft");
     private static final String MODRINTH_API = "https://api.modrinth.com/v2";
     private static final String PROJECT_ID = "DwBeOr6S";
-    private static final String API_TOKEN = "mrp_xL44PwGmJIwijtdnrzCZvCyw7eEFH9wHsq4k7t34GUgwMpuXRJrSBARUx1tF";
+    // API_TOKEN loaded from .env file for security
+    // Never hardcode tokens in source code!
+    private static final String API_TOKEN = EnvLoader.get("MODRINTH_API_TOKEN");
 
     public static void main(String[] args) {
+        // Load environment variables from .env file
+        EnvLoader.load();
+
+        // Check if token is available
+        if (API_TOKEN == null || API_TOKEN.isEmpty() || API_TOKEN.equals("your_token_here")) {
+            System.out.println("❌ ERROR: MODRINTH_API_TOKEN not configured!");
+            System.out.println("\nTo use this tool, create a .env file in the project root with:");
+            System.out.println("  MODRINTH_API_TOKEN=your_actual_token");
+            System.out.println("\nDO NOT commit the .env file to version control!");
+            System.exit(1);
+        }
+
         if (args.length == 0) {
             System.out.println("Usage:");
             System.out.println("  java ModrinthPublisher check");

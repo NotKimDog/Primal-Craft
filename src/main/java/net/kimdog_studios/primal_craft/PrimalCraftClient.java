@@ -65,6 +65,19 @@ public class PrimalCraftClient implements ClientModInitializer {
 			ClientTickEvents.END_CLIENT_TICK.register(client -> {
 				ZoomHandler.tick();
 				CameraResetHandler.tick();
+
+				// Config menu key handler - toggle on/off
+				if (ModKeyBindings.configMenuKey.wasPressed()) {
+					if (client.currentScreen instanceof net.kimdog_studios.primal_craft.client.config.ModMenuIntegration.ConfigScreen) {
+						// Close menu if already open
+						client.setScreen(null);
+						PrimalCraft.LOGGER.info("[CONFIG] Config menu closed via hotkey (])");
+					} else if (client.currentScreen == null) {
+						// Open menu if no other screen is open
+						client.setScreen(new net.kimdog_studios.primal_craft.client.config.ModMenuIntegration.ConfigScreen(null));
+						PrimalCraft.LOGGER.info("[CONFIG] Config menu opened via hotkey (])");
+					}
+				}
 			});
 
 			// Register zoom HUD overlay
@@ -228,6 +241,11 @@ public class PrimalCraftClient implements ClientModInitializer {
             context.client().execute(() -> LoginStreakHud.update(streak, day, increased, broken, previous));
         });
         HudRenderCallback.EVENT.register(new LoginStreakHud());
+
+        // Register world join listener to display config
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
+            net.kimdog_studios.primal_craft.client.config.ConfigDisplayHandler.onClientStart();
+        });
 
         long elapsed = System.currentTimeMillis() - startTime;
         PrimalCraft.LOGGER.info("  ✓ All client systems initialized");
